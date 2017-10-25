@@ -1,0 +1,7 @@
+﻿  dRGB.cpp
+c:\users\churc\source\repos\drgb\drgb\drgb.cpp(70): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+c:\users\churc\source\repos\drgb\drgb\drgb.cpp(78): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+c:\users\churc\source\repos\drgb\drgb\drgb.cpp(80): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+c:\users\churc\source\repos\drgb\drgb\drgb.cpp(83): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+c:\users\churc\source\repos\drgb\drgb\drgb.cpp(86): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+  dRGB.vcxproj -> C:\Users\churc\source\repos\dRGB\x64\Debug\dRGB.exe
