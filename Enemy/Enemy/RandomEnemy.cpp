@@ -7,6 +7,7 @@
 using namespace std;
 using namespace cv;
 
+static Mat img, frame;
 RandomEnemy::RandomEnemy() {}
 
 RandomEnemy::RandomEnemy(int enX, int enY):
@@ -21,6 +22,11 @@ RandomEnemy::RandomEnemy(int enX, int enY):
 //	enemyYPosition = newYPos;
 //}
 
+Mat RandomEnemy::imageRowCol() {
+	img = imread("Dragon.png");
+	return img;
+}
+
 int RandomEnemy::getEnemyX() {
 	cout << "The X position is \n" << enemyXPostition << endl;
 	return enemyXPostition;
@@ -32,7 +38,6 @@ int RandomEnemy::getEnemyY(){
 }
 
 void RandomEnemy::showEnemy() {
-	Mat img, frame;
 	img = imread("Dragon.png");
 	frame = Mat::zeros(img.rows, img.cols, 0);
 
@@ -41,19 +46,11 @@ void RandomEnemy::showEnemy() {
 			frame.at<unsigned char>(enemyYPosition, enemyXPostition) = 255;
 		}
 	}
-	cout << "............................ " << enemyXPostition << "\n" << enemyYPosition << endl;
+	cout << "X spawn position is  " << enemyXPostition << "\nY spawn position is " << enemyYPosition << "\n" << endl;
 
+	namedWindow("Screen Image", WINDOW_NORMAL);
+	setWindowProperty("Screen Image", CV_WND_PROP_FULLSCREEN, 0);
 	imshow("Screen Image", frame);
 
 	waitKey(0);
 }
-
-
-/*
-for (int x = 0; x < img.cols; x++) {
-
-imgLine = Mat::zeros(imgLine.rows, imgLine.cols, CV_8UC3);
-line(imgLine, Point(30 + x, 50), Point(70 + x, 70), CV_RGB(0, 0, 255), 6);
-//disp = zeros(disp.rows, disp.cols);
-}
-*/

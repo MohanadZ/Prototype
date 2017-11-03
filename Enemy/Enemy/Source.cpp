@@ -5,8 +5,7 @@
 #include <random>
 #include "RandomEnemy.h"
 
-//default_random_engine generator;
-//uniform_int_distribution<int> distribution(0, 750);
+using namespace std;
 
 time_t seconds;
 
@@ -21,23 +20,15 @@ int main() {
 	cout << ".................. " << rand() % 10 << endl;
 	system("pause");*/
 
-	//int objX = distribution(generator);
-	//int objY = distribution(generator);
-
-	/*RandomEnemy obj = RandomEnemy(objX, objY);
-	obj.getEnemyX();
-	obj.getEnemyY();
-	system("pause");*/
-
 	time(&seconds);
 	srand((unsigned char)seconds);
-
+	
 	RandomEnemy obj[10];
 	for (int i = 0; i < 10; i++) {
-		int objX = rand() % 500;
-		int objY = rand() % 500;
+		int objX = rand() % obj[i].imageRowCol().cols;
+		int objY = rand() % obj[i].imageRowCol().rows;
 
-		//if-statement to exclude the range at which the avatar is going to be placed at
+		//Add if-statement to exclude the range at which the avatar is going to be placed at
 
 		obj[i] = RandomEnemy(objX, objY);
 		obj[i].getEnemyX();

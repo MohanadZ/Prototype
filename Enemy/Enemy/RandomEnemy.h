@@ -1,5 +1,10 @@
 #pragma once
+#include "opencv2\core\core.hpp"
+#include "opencv2\highgui\highgui.hpp"
+#include "opencv2\imgproc\imgproc.hpp"
 #ifndef ENEMY_H
+
+using namespace cv;
 
 class RandomEnemy
 {
@@ -13,6 +18,7 @@ public:
 	RandomEnemy(int enemyXPosition, int enemyYPosition);
 	//void setEnemyX(int newXPos);
 	//void setEnemyY(int newYPos);
+	Mat imageRowCol();
 	int getEnemyX();
 	int getEnemyY();
 	void showEnemy();
