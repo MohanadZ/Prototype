@@ -2,7 +2,10 @@
 
 https://www.sfml-dev.org/
 
-Libaries:
+SETUP:
+https://www.sfml-dev.org/tutorials/2.0/start-vc.php
+
+LIBARIES:
 sfml-audio.lib
 sfml-audio-d.lib
 sfml-audio-s-d.lib
