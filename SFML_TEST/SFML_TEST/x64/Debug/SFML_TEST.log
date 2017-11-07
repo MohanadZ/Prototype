@@ -1,0 +1,3 @@
+﻿  Source.cpp
+c:\users\anwar\desktop\sfml_test\sfml_test\source.cpp(11): warning C4244: 'argument': conversion from 'float' to 'unsigned int', possible loss of data
+  SFML_TEST.vcxproj -> C:\Users\Anwar\Desktop\SFML_TEST\x64\Debug\SFML_TEST.exe
