@@ -1,5 +1,5 @@
 ﻿  asdfasdgsad.cpp
-d:\visual\projects\asdfasdgsad\asdfasdgsad\asdfasdgsad.cpp(185): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-d:\visual\projects\asdfasdgsad\asdfasdgsad\asdfasdgsad.cpp(188): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
-d:\visual\projects\asdfasdgsad\asdfasdgsad\asdfasdgsad.cpp(189): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+d:\visual\projects\asdfasdgsad\asdfasdgsad\asdfasdgsad.cpp(280): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+d:\visual\projects\asdfasdgsad\asdfasdgsad\asdfasdgsad.cpp(302): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+d:\visual\projects\asdfasdgsad\asdfasdgsad\asdfasdgsad.cpp(303): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
   asdfasdgsad.vcxproj -> D:\Visual\Projects\asdfasdgsad\x64\Debug\asdfasdgsad.exe
