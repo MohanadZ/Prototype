@@ -1,0 +1,5 @@
+﻿  Source.cpp
+d:\downloads\prototype-mohanadz-patch-1 (2)\prototype-mohanadz-patch-1\enemy\enemy\source.cpp(61): warning C4805: '==': unsafe mix of type 'int' and type 'bool' in operation
+d:\downloads\prototype-mohanadz-patch-1 (2)\prototype-mohanadz-patch-1\enemy\enemy\source.cpp(65): warning C4805: '==': unsafe mix of type 'int' and type 'bool' in operation
+d:\downloads\prototype-mohanadz-patch-1 (2)\prototype-mohanadz-patch-1\enemy\enemy\source.cpp(69): warning C4805: '==': unsafe mix of type 'int' and type 'bool' in operation
+  Enemy.vcxproj -> D:\Downloads\Prototype-MohanadZ-patch-1 (2)\Prototype-MohanadZ-patch-1\Enemy\x64\Debug\Enemy.exe
