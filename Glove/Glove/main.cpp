@@ -10,12 +10,7 @@ Mat imgTmp;
 Mat imgLines;
 Mat imgHSV;
 Mat imgThresholded;
-Mat templateArray[] = { imread("Shapes1.jpg", 0), imread("Shapes2.jpg", 0), imread("Shapes3.jpg", 0), imread("Shapes4.jpg", 0), imread("Shapes5.jpg", 0)};
-//Mat template1 = imread("Shapes1.jpg", 0);
-//Mat template2 = imread("Shapes2.jpg", 0);
-//Mat template3 = imread("Shapes3.jpg", 0);
-//Mat template4 = imread("Shapes4.jpg", 0);
-//Mat template5 = imread("Shapes5.jpg", 0);
+Mat templateArray[] = { imread("Shapes1.jpg", 0), imread("Shapes2.jpg", 0), imread("Shapes3.jpg", 0), imread("Shapes4.jpg", 0), imread("Shapes5.jpg", 0) };
 Mat result = imread("");
 Mat translatedImage;
 Mat crop;
@@ -33,6 +28,13 @@ int posY;
 int templateWidth = 210;
 int templateHeight = 238;
 int percentage;
+int matchingValue = 0;
+int handClosed = 0;
+int shape1 = 0;
+int shape2 = 0;
+int shape3 = 0;
+int shape4 = 0;
+int shape5 = 0;
 
 Moments oMoments;
 
@@ -44,14 +46,10 @@ double dM10;
 double dArea;
 double area;
 
-bool handClosed = 0;
-
 void drawLine(double contourArea);
 void translateImage(Mat input);
 void scaleImage(Mat input, float x, float y);
 int match(Mat input, double area);
-
-int matchingValue = 0;
 
 int main()
 {
@@ -70,15 +68,15 @@ int main()
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 360);
 
 	namedWindow("Control", CV_WINDOW_NORMAL); //create a window called "Control"
-	
-	int iLowH = 47;
-	int iHighH = 103;
 
-	int iLowS = 0;
-	int iHighS = 128;
+	int iLowH = 79;
+	int iHighH = 168;
+
+	int iLowS = 91;
+	int iHighS = 170;
 
 	int iLowV = 0;
-	int iHighV = 51;
+	int iHighV = 38;
 
 	//int iLowH = 0;	
 	//int iHighH = 179;
@@ -170,8 +168,8 @@ int main()
 void drawLine(double contourArea) {
 	if (contourArea > 3000 && contourArea < 14000) {
 		handClosed = 1;
-		posX = (int) (dM10 / dArea);
-		posY = (int) (dM01 / dArea);
+		posX = (int)(dM10 / dArea);
+		posY = (int)(dM01 / dArea);
 
 		if (iLastX >= 0 && iLastY >= 0 && posX >= 0 && posY >= 0)
 		{
@@ -191,7 +189,7 @@ void drawLine(double contourArea) {
 		translateImage(imgLines);
 		scaleImage(translatedImage, dX, dY);
 		match(crop, area);
-		cout << "The returned value is " << matchingValue << endl;
+		cout << "The returned value is " << shape1 << "\n" << shape2 << "\n" << shape3 << "\n" << shape4 << "\n" << shape5 << endl;
 		//imshow("Drawn Shape", imgLines);
 		imgLines = Mat::zeros(imgTmp.size(), CV_8UC3);
 		translatedImage = Mat::zeros(imgLines.rows, imgLines.cols, CV_8UC1);
@@ -203,7 +201,7 @@ void translateImage(Mat input) {
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
 	findContours(input, contours, hierarchy, CV_RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));
-	
+
 	vector<vector<Point> > contours_poly(contours.size());
 	vector<Rect> boundRect(contours.size());
 
@@ -218,8 +216,8 @@ void translateImage(Mat input) {
 	{
 		Rect drawnShape(boundRect[i].tl(), boundRect[i].br());
 		center = (drawnShape.br() + drawnShape.tl())*0.5;
-		dX = (float) templateWidth / drawnShape.width;
-		dY = (float) templateHeight / drawnShape.height;
+		dX = (float)templateWidth / drawnShape.width;
+		dY = (float)templateHeight / drawnShape.height;
 	}
 
 	if (area < 3000) {
@@ -261,61 +259,100 @@ int match(Mat input, double area) {
 		imshow("result", result);
 		cout << "..........................." << percentage << endl;
 		if (percentage < 5000) {
+			shape1 = 1;
+			shape2 = 0;
+			shape3 = 0;
+			shape4 = 0;
+			shape5 = 0;
+
 			cout << percentage << endl;
 			cout << "kill shape 1" << endl;
 			imshow("result", result);
 
-			matchingValue = 1;
-			return matchingValue;
+			//matchingValue = 1;
+			return shape1;
 		}
 		else if (percentage > 5000) {
 			compare(input, templateArray[1], result, CMP_NE);
 			percentage = countNonZero(result);
 			if (percentage < 5000) {
+				shape1 = 0;
+				shape2 = 1;
+				shape3 = 0;
+				shape4 = 0;
+				shape5 = 0;
 				cout << percentage << endl;
 				cout << "kill shape 2" << endl;
 				imshow("result", result);
 
-				matchingValue = 2;
-				return matchingValue;
+				//matchingValue = 2;
+				return shape2;
 			}
 			else if (percentage > 5000) {
 				compare(input, templateArray[2], result, CMP_NE);
 				percentage = countNonZero(result);
-				if (percentage < 8000) {
+				if (percentage < 6500) {
+					shape1 = 0;
+					shape2 = 0;
+					shape3 = 1;
+					shape4 = 0;
+					shape5 = 0;
 					cout << percentage << endl;
 					cout << "kill shape 3" << endl;
 					imshow("result", result);
 
-					matchingValue = 3;
-					return matchingValue;
+					//matchingValue = 3;
+					return shape3;
 				}
 				else if (percentage > 5000) {
 					compare(input, templateArray[3], result, CMP_NE);
 					percentage = countNonZero(result);
-					if (percentage < 8000) {
+					if (percentage < 6500) {
+						shape1 = 0;
+						shape2 = 0;
+						shape3 = 0;
+						shape4 = 1;
+						shape5 = 0;
 						cout << percentage << endl;
 						cout << "kill shape 4" << endl;
 						imshow("result", result);
 
-						matchingValue = 4;
-						return matchingValue;
+						//matchingValue = 4;
+						return shape4;
 					}
 					else if (percentage > 5000) {
 						compare(input, templateArray[4], result, CMP_NE);
 						percentage = countNonZero(result);
-						if (percentage < 12000) {
+						if (percentage < 10000) {
+							shape1 = 0;
+							shape2 = 0;
+							shape3 = 0;
+							shape4 = 0;
+							shape5 = 1;
 							cout << percentage << endl;
 							cout << "kill shape 5" << endl;
 							imshow("result", result);
 
-							matchingValue = 5;
-							return matchingValue;
+							//matchingValue = 5;
+							return shape5;
+						}
+						else {
+							shape1 = 0;
+							shape2 = 0;
+							shape3 = 0;
+							shape4 = 0;
+							shape5 = 0;
 						}
 					}
 				}
 			}
 		}
 	}
-	//else return matchingValue = 0;
+	else {
+		shape1 = 0;
+		shape2 = 0;
+		shape3 = 0;
+		shape4 = 0;
+		shape5 = 0;
+	}
 }
