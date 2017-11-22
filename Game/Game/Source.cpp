@@ -89,14 +89,36 @@ int main(int argc, char** argv) {
 	//idleMonsterTextureSize.x /= 20;
 	//IntRect enemyRectSourceSprite(0, 0, idleMonsterTextureSize.x, idleMonsterTextureSize.y);
 
-	Texture avatarT, monsterT;
+	Texture avatarT, monsterT, monsterRT;
 	avatarT.loadFromFile("WizardSheet.png");
+	monsterT.loadFromFile("MonsterSheet.png");
+
+	SpriteAnimation avatarAnimation(&avatarT, Vector2u(20, 4), 0.05f);
+
 	for (int x = 0; x < number; x++) {
-		monsterT.loadFromFile("MonsterSheet.png");
 		monster[x].anim = { &monsterT, Vector2u(20, 4), 0.05f };
 	}
 
-	SpriteAnimation avatarAnimation(&avatarT, Vector2u(20, 4), 0.05f);
+	int testShape[number];
+	for (int i = 0; i < number; i++) {
+		testShape[i] = rand() % 300;
+		if (testShape[i] <= 60) {
+			testShape[i] = 0;
+		}
+		if (testShape[i] <= 120 && testShape[i] > 60) {
+			testShape[i] = 1;
+		}
+		if (testShape[i] <= 180 && testShape[i] > 120) {
+			testShape[i] = 2;
+		}
+		if (testShape[i] <= 240 && testShape[i] > 180) {
+			testShape[i] = 3;
+		}
+		if (testShape[i] <= 300 && testShape[i] > 240) {
+			testShape[i] = 4;
+		}
+		cout << "................................." << testShape[i] << endl;
+	}
 
 	//Start the game loop in order for the window to stay open
 	while (gameWindow.isOpen()) {
@@ -142,7 +164,7 @@ int main(int argc, char** argv) {
 		//Update the animation of the monster sprite
 		for (int z = 0; z < number; z++) {
 			if (monster[z].idle == 1) {
-				monster[z].anim.updateAnimation(1, deltaTime);
+				monster[z].anim.updateAnimation(testShape[z], deltaTime);
 					monster[z].monsterSprite.setTextureRect(monster[z].anim.textureRect);
 			}
 			if (monster[z].attack == 1) {
@@ -150,7 +172,7 @@ int main(int argc, char** argv) {
 				monster[z].monsterSprite.setTextureRect(monster[z].anim.textureRect);
 			}
 			if (monster[z].dying == 1) {
-				monster[z].anim.updateAnimation(3,  deltaTime);
+				monster[z].anim.updateAnimation(3, deltaTime);
 				monster[z].monsterSprite.setTextureRect(monster[z].anim.textureRect);
 			}
 		}
@@ -216,6 +238,31 @@ int main(int argc, char** argv) {
 					separateMonsters(i);
 
 					monster[i].monsterSprite.setPosition((float)(monster[i].monsterX), (float)(monster[i].monsterY));
+
+					testShape[i] = rand() % 300;
+					
+					//for (int i = 0; i < number; i++) {
+						testShape[i] = rand() % 300;
+						if (testShape[i] <= 60) {
+							testShape[i] = 0;
+						}
+						if (testShape[i] <= 120 && testShape[i] > 60) {
+							testShape[i] = 1;
+						}
+						if (testShape[i] <= 180 && testShape[i] > 120) {
+							testShape[i] = 2;
+						}
+						if (testShape[i] <= 240 && testShape[i] > 180) {
+							testShape[i] = 3;
+						}
+						if (testShape[i] <= 300 && testShape[i] > 240) {
+							testShape[i] = 4;
+						}
+						cout << "Another spawn random____________________ " << testShape[i] << endl;
+					//}
+				
+					monster[i].anim.currentImage.y = testShape[i];
+
 					monster[i].monstersSpeed(wizard.avatarSprite.getPosition().x, wizard.avatarSprite.getPosition().y, difficulty);
 					monster[i].moveMonsters();
 
