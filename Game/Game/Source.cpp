@@ -91,10 +91,12 @@ int main(int argc, char** argv) {
 
 	Texture avatarT, monsterT;
 	avatarT.loadFromFile("WizardSheet.png");
-	monsterT.loadFromFile("MonsterSheet.png");
+	for (int x = 0; x < number; x++) {
+		monsterT.loadFromFile("MonsterSheet.png");
+		monster[x].anim = { &monsterT, Vector2u(20, 4), 0.05f };
+	}
 
 	SpriteAnimation avatarAnimation(&avatarT, Vector2u(20, 4), 0.05f);
-	SpriteAnimation monsterAnimation(&monsterT, Vector2u(20, 4), 0.05f);
 
 	//Start the game loop in order for the window to stay open
 	while (gameWindow.isOpen()) {
@@ -140,16 +142,16 @@ int main(int argc, char** argv) {
 		//Update the animation of the monster sprite
 		for (int z = 0; z < number; z++) {
 			if (monster[z].idle == 1) {
-				monsterAnimation.updateAnimation(1, 0.2f * deltaTime);
-					monster[z].monsterSprite.setTextureRect(monsterAnimation.textureRect);
+				monster[z].anim.updateAnimation(1, deltaTime);
+					monster[z].monsterSprite.setTextureRect(monster[z].anim.textureRect);
 			}
 			if (monster[z].attack == 1) {
-				monsterAnimation.updateAnimation(2, 0.2f * deltaTime);
-					monster[z].monsterSprite.setTextureRect(monsterAnimation.textureRect);
+				monster[z].anim.updateAnimation(2, deltaTime);
+				monster[z].monsterSprite.setTextureRect(monster[z].anim.textureRect);
 			}
 			if (monster[z].dying == 1) {
-				monsterAnimation.updateAnimation(3, 0.2f * deltaTime);
-					monster[z].monsterSprite.setTextureRect(monsterAnimation.textureRect);
+				monster[z].anim.updateAnimation(3,  deltaTime);
+				monster[z].monsterSprite.setTextureRect(monster[z].anim.textureRect);
 			}
 		}
 		////The animation of the sprites. Checks every second whether the rect is on the last frame, if not it will increment
@@ -191,20 +193,20 @@ int main(int argc, char** argv) {
 					monster[i].attack = 1;
 					monster[i].speedX = 0;
 					monster[i].speedY = 0;
-					monsterAnimation.currentImage.x = 0;
+					monster[i].anim.currentImage.x = 0;
 					avatarAnimation.currentImage.x = 0;
 				}
 
-				if (monster[i].attack == 1 && monsterAnimation.currentImage.x == 19){ //&& avatarAnimation.currentImage.x == 19) {
+				if (monster[i].attack == 1 && monster[i].anim.currentImage.x == 19){ //&& avatarAnimation.currentImage.x == 19) {
 					monster[i].dying = 1;
 					monster[i].attack = 0;
 					a_idle = 0;
 					a_damaged = 1;
-					monsterAnimation.currentImage.x = 0;
+					monster[i].anim.currentImage.x = 0;
 					avatarAnimation.currentImage.x = 0;
 				}
 			
-				if (monster[i].dying == 1 && monsterAnimation.currentImage.x == 19){ //&& avatarAnimation.currentImage.x == 19) {
+				if (monster[i].dying == 1 && monster[i].anim.currentImage.x == 19){ //&& avatarAnimation.currentImage.x == 19) {
 					monster[i].dying = 0;
 					monster[i].idle = 1;
 					a_damaged = 0;
