@@ -28,7 +28,6 @@ int posY;
 int templateWidth = 210;
 int templateHeight = 238;
 int percentage;
-int matchingValue = 0;
 int handClosed = 0;
 int shape1 = 0;
 int shape2 = 0;
@@ -44,7 +43,8 @@ float dY;
 double dM01;
 double dM10;
 double dArea;
-double area;
+double areaHand;
+double areaShape;
 
 void drawLine(double contourArea);
 void translateImage(Mat input);
@@ -69,16 +69,7 @@ int main()
 
 	namedWindow("Control", CV_WINDOW_NORMAL); //create a window called "Control"
 
-	int iLowH = 79;
-	int iHighH = 168;
-
-	int iLowS = 91;
-	int iHighS = 170;
-
-	int iLowV = 0;
-	int iHighV = 38;
-
-	//int iLowH = 0;	
+	//int iLowH = 0;
 	//int iHighH = 179;
 
 	//int iLowS = 0;
@@ -86,6 +77,15 @@ int main()
 
 	//int iLowV = 0;
 	//int iHighV = 255;
+
+	int iLowH = 0;	
+	int iHighH = 179;
+
+	int iLowS = 0;
+	int iHighS = 255;
+
+	int iLowV = 0;
+	int iHighV = 255;
 
 	//Create trackbars in "Control" window
 	cvCreateTrackbar("LowH", "Control", &iLowH, 179); //Hue (0 - 179)
@@ -143,8 +143,8 @@ int main()
 
 		for (size_t i = 0; i < contours.size(); i++)
 		{
-			area = contourArea(contours[i], false);
-			drawLine(area);
+			areaHand = contourArea(contours[i], false); // Area of hand
+			drawLine(areaHand);
 			//cout << "Area : " << area << "\n";
 		}
 
@@ -166,7 +166,7 @@ int main()
 }
 
 void drawLine(double contourArea) {
-	if (contourArea > 3000 && contourArea < 14000) {
+	if (contourArea > 200 && contourArea < 500) {
 		handClosed = 1;
 		posX = (int)(dM10 / dArea);
 		posY = (int)(dM01 / dArea);
@@ -181,14 +181,14 @@ void drawLine(double contourArea) {
 		iLastY = posY;
 	}
 
-	if (contourArea > 20000 && contourArea < 30000 && handClosed == 1) {
+	if (contourArea > 700 && contourArea < 1000 && handClosed == 1) {
 		handClosed = 0;
 		iLastX = -1;
 		iLastY = -1;
 
 		translateImage(imgLines);
 		scaleImage(translatedImage, dX, dY);
-		match(crop, area);
+		match(crop, areaShape);
 		cout << "The returned value is " << shape1 << "\n" << shape2 << "\n" << shape3 << "\n" << shape4 << "\n" << shape5 << endl;
 		//imshow("Drawn Shape", imgLines);
 		imgLines = Mat::zeros(imgTmp.size(), CV_8UC3);
@@ -207,7 +207,7 @@ void translateImage(Mat input) {
 
 	for (size_t i = 0; i < contours.size(); i++)
 	{
-		area = contourArea(contours[i], false);
+		areaShape = contourArea(contours[i], false); // Area of drawn shape
 		approxPolyDP(Mat(contours[i]), contours_poly[i], 3, true);
 		boundRect[i] = boundingRect(Mat(contours_poly[i]));
 	}
@@ -220,7 +220,7 @@ void translateImage(Mat input) {
 		dY = (float)templateHeight / drawnShape.height;
 	}
 
-	if (area < 3000) {
+	if (areaShape < 200) {
 		input = Mat::zeros(imgTmp.size(), CV_8UC3);
 	}
 	else {
@@ -253,11 +253,11 @@ void scaleImage(Mat input, float x, float y) {
 }
 
 int match(Mat input, double area) {
-	if (area > 4000) {
+	if (area > 1000) {
 		compare(input, templateArray[0], result, CMP_NE);
 		percentage = countNonZero(result);
 		imshow("result", result);
-		cout << "..........................." << percentage << endl;
+		cout << "Percentage match for shape 1: " << percentage << endl;
 		if (percentage < 5000) {
 			shape1 = 1;
 			shape2 = 0;
@@ -269,12 +269,12 @@ int match(Mat input, double area) {
 			cout << "kill shape 1" << endl;
 			imshow("result", result);
 
-			//matchingValue = 1;
 			return shape1;
 		}
 		else if (percentage > 5000) {
 			compare(input, templateArray[1], result, CMP_NE);
 			percentage = countNonZero(result);
+			cout << "Percentage match for shape 2: " << percentage << endl;
 			if (percentage < 5000) {
 				shape1 = 0;
 				shape2 = 1;
@@ -285,12 +285,12 @@ int match(Mat input, double area) {
 				cout << "kill shape 2" << endl;
 				imshow("result", result);
 
-				//matchingValue = 2;
 				return shape2;
 			}
 			else if (percentage > 5000) {
 				compare(input, templateArray[2], result, CMP_NE);
 				percentage = countNonZero(result);
+				cout << "Percentage match for shape 3: " << percentage << endl;
 				if (percentage < 6500) {
 					shape1 = 0;
 					shape2 = 0;
@@ -301,12 +301,12 @@ int match(Mat input, double area) {
 					cout << "kill shape 3" << endl;
 					imshow("result", result);
 
-					//matchingValue = 3;
 					return shape3;
 				}
 				else if (percentage > 5000) {
 					compare(input, templateArray[3], result, CMP_NE);
 					percentage = countNonZero(result);
+					cout << "Percentage match for shape 4: " << percentage << endl;
 					if (percentage < 6500) {
 						shape1 = 0;
 						shape2 = 0;
@@ -317,13 +317,13 @@ int match(Mat input, double area) {
 						cout << "kill shape 4" << endl;
 						imshow("result", result);
 
-						//matchingValue = 4;
 						return shape4;
 					}
-					else if (percentage > 5000) {
+					else if (percentage > 12000) {
 						compare(input, templateArray[4], result, CMP_NE);
 						percentage = countNonZero(result);
-						if (percentage < 10000) {
+						cout << "Percentage match for shape 5: " << percentage << endl;
+						if (percentage < 15000) {
 							shape1 = 0;
 							shape2 = 0;
 							shape3 = 0;
@@ -333,7 +333,6 @@ int match(Mat input, double area) {
 							cout << "kill shape 5" << endl;
 							imshow("result", result);
 
-							//matchingValue = 5;
 							return shape5;
 						}
 						else {
