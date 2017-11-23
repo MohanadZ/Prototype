@@ -9,7 +9,6 @@ class Avatar
 {
 private:
 	int gameW = 1920, gameH = 1080;	
-	//int avatarLabel = 1;	//1 means the avatar is idle
 	float avatarX, avatarY;
 	float avatarW = 0.75f, avatarH = 0.75f;
 

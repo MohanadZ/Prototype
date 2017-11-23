@@ -71,10 +71,6 @@ int main(int argc, char** argv) {
 
 	wizard.createAvatar(1);
 
-	//IntRect avatarRectSourceSprite(0, 0, wizard.avatarTextureSize.x, wizard.avatarTextureSize.y);
-
-	//decoyAvatarTexture.loadFromFile("WizardIdle.png");
-
 	//Monster
 	for (int i = 0; i < sizeof(monster) / sizeof(monster[0]); i++) {
 		monster[i].createMonsters();
@@ -84,10 +80,6 @@ int main(int argc, char** argv) {
 
 		monster[i].monstersSpeed(wizard.avatarSprite.getPosition().x, wizard.avatarSprite.getPosition().y, difficulty);
 	}
-
-	//idleMonsterTextureSize = monster[0].monsterTexture.getSize();
-	//idleMonsterTextureSize.x /= 20;
-	//IntRect enemyRectSourceSprite(0, 0, idleMonsterTextureSize.x, idleMonsterTextureSize.y);
 
 	Texture avatarT, monsterT, monsterRT;
 	avatarT.loadFromFile("WizardSheet.png");
@@ -176,35 +168,6 @@ int main(int argc, char** argv) {
 				monster[z].monsterSprite.setTextureRect(monster[z].anim.textureRect);
 			}
 		}
-		////The animation of the sprites. Checks every second whether the rect is on the last frame, if not it will increment
-		//if (spriteClock.getElapsedTime().asSeconds() > 0.05f) {
-		//	//Avatar
-		//	if (avatarRectSourceSprite.left < 11340) {
-		//		avatarRectSourceSprite.left += wizard.avatarTextureSize.x;
-		//	}
-		//	if (avatarRectSourceSprite.left >= 11340) {
-		//		avatarRectSourceSprite.left = 0;
-		//		wizard.avatarSprite.setTexture(decoyAvatarTexture);
-		//	}
-
-		//	//Monster
-		//	if (enemyRectSourceSprite.left < 13240) {
-		//		enemyRectSourceSprite.left += idleMonsterTextureSize.x;
-		//	}
-		//	if (enemyRectSourceSprite.left >= 13240) {
-		//		enemyRectSourceSprite.left = 0;
-		//	}
-
-		//	wizard.avatarSprite.setTextureRect(avatarRectSourceSprite);
-
-		//	for (int i = 0; i < sizeof(monster) / sizeof(monster[0]); i++) {
-		//		//Updating the texture rect
-		//		monster[i].monsterSprite.setTextureRect(enemyRectSourceSprite);
-		//	}
-
-		//	//Starts clock over
-		//	spriteClock.restart();
-		//}
 
 		for (int i = 0; i < monsterNumber; i++) {
 			monster[i].moveMonsters();
@@ -266,10 +229,6 @@ int main(int argc, char** argv) {
 					monster[i].monstersSpeed(wizard.avatarSprite.getPosition().x, wizard.avatarSprite.getPosition().y, difficulty);
 					monster[i].moveMonsters();
 
-					
-					//avatarRectSourceSprite.left = 0;
-					//wizard.createAvatar(0);
-
 					score += 100;
 					updateScore(score);
 
@@ -278,8 +237,6 @@ int main(int argc, char** argv) {
 
 			}
 		}
-
-		//cout << s << endl;
 
 		//cout << "The avatar's hp is " << wizard.avatarLife << endl;
 		if (wizard.avatarLife == 3) {
@@ -304,7 +261,6 @@ int main(int argc, char** argv) {
 		gameWindow.draw(hpSprite);
 		gameWindow.draw(scoreText);
 		gameWindow.draw(wizard.avatarSprite);
-		//gameWindow.draw(damagedWizard.avatarSprite);
 		for (int i = 0; i < sizeof(monster) / sizeof(monster[0]); i++) {
 			gameWindow.draw(monster[i].monsterSprite);
 		}

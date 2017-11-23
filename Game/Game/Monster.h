@@ -24,7 +24,7 @@ public:
 	void createMonsters();
 	void monstersSpeed(float x, float y, float difficulty);
 	void moveMonsters();
-	bool detectCollision();
+	//bool detectCollision();
 
 	~Monster();
 };

@@ -20,10 +20,6 @@ void Monster::loadTexture(int label) {
 }
 
 void Monster::createMonsters() {
-
-	//time_t srand(time(NULL));
-	/*monsterX = (float) (rand() % 120);
-	monsterY = (float) (rand() % 120);*/
 	loadTexture(0);
 }
 
@@ -40,31 +36,25 @@ void Monster::moveMonsters() {
 	monsterSprite.move(speedX, speedY);
 }
 
-bool Monster::detectCollision() {
-	//m_avatar.createAvatar();
+//bool Monster::detectCollision() {
+//	//m_avatar.createAvatar();
+//
+//	if (monsterSprite.getGlobalBounds().intersects(m_avatar.decoyAvatarSprite.getGlobalBounds())) {
+//
+//		////time_t srand(time(NULL));
+//		//monsterX = (float) (rand() % 120);
+//		//monsterY = (float) (rand() % 120);
+//
+//		//monsterSprite.setPosition(monsterX, monsterY);
+//		//monstersSpeed(monsterX, monsterY);
+//		//moveMonsters();
+//		return true;
+//	}
+//	else
+//
+//		return false;
+//}
 
-	if (monsterSprite.getGlobalBounds().intersects(m_avatar.decoyAvatarSprite.getGlobalBounds())) {
-
-		////time_t srand(time(NULL));
-		//monsterX = (float) (rand() % 120);
-		//monsterY = (float) (rand() % 120);
-
-		//monsterSprite.setPosition(monsterX, monsterY);
-		//monstersSpeed(monsterX, monsterY);
-		//moveMonsters();
-		return true;
-	}
-	else
-
-		return false;
-}
-
-/*cout << "The width of the bounding box for the avatar is " << m_avatar.avatarSprite.getGlobalBounds().width << endl;
-cout << "The height of the bounding box for the avatar is " << m_avatar.avatarSprite.getGlobalBounds().height << endl;
-cout << "\n3)The width of the bounding box for the monster is " << enemySprite[0].getGlobalBounds().width << endl;
-cout << "3)The height of the bounding box for the monster is " << enemySprite[0].getGlobalBounds().height << endl;*
-
-*/
 Monster::~Monster()
 {
 }
