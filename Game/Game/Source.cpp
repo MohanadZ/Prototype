@@ -109,6 +109,9 @@ int main(int argc, char** argv) {
 		if (testShape[i] <= 300 && testShape[i] > 240) {
 			testShape[i] = 4;
 		}
+		if (monster[i].monsterX > gameW / 2) {
+			testShape[i] += 5;
+		}
 		cout << "................................." << testShape[i] << endl;
 	}
 
@@ -221,6 +224,10 @@ int main(int argc, char** argv) {
 						if (testShape[i] <= 300 && testShape[i] > 240) {
 							testShape[i] = 4;
 						}
+						if (monster[i].monsterX > gameW / 2) {
+							testShape[i] += 5;
+						}
+
 						cout << "Another spawn random____________________ " << testShape[i] << endl;
 					//}
 				
