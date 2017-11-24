@@ -8,7 +8,6 @@ using namespace std;
 Mat imgOriginal;
 Mat imgTmp;
 Mat imgLines;
-Mat imgHSI;
 Mat imgThresholded;
 Mat templateArray[] = { imread("1.jpg", 0), imread("2.jpg", 0), imread("3.jpg", 0), imread("4.jpg", 0), imread("5.jpg", 0) };
 Mat result;
@@ -76,7 +75,7 @@ int main()
 	int iLowS = 121;
 	int iHighS = 255;
 
-	int iLowI = 0;
+	int iLowI = 51;
 	int iHighI = 255;
 
 	//int iLowH = 0;	
@@ -119,10 +118,7 @@ int main()
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
 
-		imgHSI = imgOriginal.clone();
 		convertRGB2HSI(imgOriginal);
-
-		//cvtColor(imgOriginal, imgHSI, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
 
 		GaussianBlur(imgOriginal, imgOriginal, Size(11, 11), 0, 0);
 		inRange(imgOriginal, Scalar(iLowH, iLowS, iLowI), Scalar(iHighH, iHighS, iHighI), imgThresholded); //Threshold the image
@@ -149,10 +145,10 @@ int main()
 		for (size_t i = 0; i < contours.size(); i++)
 		{
 			areaHand = contourArea(contours[i], false); // Area of hand
-			drawLine(areaHand);
 			//cout << "Area : " << areaHand << "\n";
 		}
 
+		drawLine(areaHand);
 		imshow("Thresholded Image", imgThresholded); //show the thresholded image
 
 		imgOriginal = imgOriginal + imgLines;
