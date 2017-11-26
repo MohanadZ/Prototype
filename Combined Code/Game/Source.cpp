@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <time.h>
+#include <thread>
 
 #include "Avatar.h"
 #include "Monster.h"
@@ -64,6 +65,9 @@ int score = 0;
 float difficulty = 0.0004f;
 int monsterNumber = 1;
 
+SpriteAnimation avatarAnimation;
+Avatar wizard;
+
 Texture bgr;
 Texture hp0, hp1, hp2, hp3;
 Texture avatarT, monsterT, monsterRT;
@@ -92,6 +96,7 @@ int match(Mat input, double area);
 //Game functions 
 void game();
 void separateMonsters(int i);
+void destroyMonster(int i);
 void setDifficulty();
 void updateScore(int s);
 
@@ -99,7 +104,7 @@ int main(int argc, char** argv) {
 	for (int i = 0; i < 5; i++) {
 		threshold(templateArray[i], templateArray[i], 127, 255, THRESH_BINARY);
 	}
-	
+
 	if (!cap.isOpened())  // if not success, exit program
 	{
 		cout << "Cannot open the web cam" << endl;
@@ -109,7 +114,14 @@ int main(int argc, char** argv) {
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, 452); // Size of the camera
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 254);
 
-	game();
+	//imageProcessing();
+	//game();
+
+	std::thread imageThread(imageProcessing);
+	std::thread gameThread(game);
+
+	imageThread.join();
+	gameThread.join();
 
 	return 0;
 }
@@ -117,13 +129,13 @@ int main(int argc, char** argv) {
 void imageProcessing() {
 	namedWindow("Control", CV_WINDOW_NORMAL); //create a window called "Control"
 
-	int iLowH = 105;
-	int iHighH = 148;
+	int iLowH = 99;
+	int iHighH = 129;
 
-	int iLowS = 121;
+	int iLowS = 79;
 	int iHighS = 255;
 
-	int iLowI = 51;
+	int iLowI = 37;
 	int iHighI = 255;
 
 	//int iLowH = 0;	
@@ -152,15 +164,15 @@ void imageProcessing() {
 	imgLines = Mat::zeros(imgTmp.rows, imgTmp.cols, CV_8UC3);
 	translatedImage = Mat::zeros(imgLines.rows, imgLines.cols, CV_8UC1);
 
-	//while (true)
-	//{
+	while (true)
+	{
 		bool bSuccess = cap.read(imgOriginal); // read a new frame from video
 		centerOfImage = Point(imgOriginal.cols / 2, imgOriginal.rows / 2);
 		flip(imgOriginal, imgOriginal, 1);
 		if (!bSuccess) //if not success, break loop
 		{
 			cout << "Cannot read a frame from video stream" << endl;
-			//break;
+			break;
 		}
 
 		vector<vector<Point> > contours;
@@ -206,9 +218,9 @@ void imageProcessing() {
 		if (waitKey(1) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
 		{
 			cout << "esc key is pressed by user" << endl;
-			//break;
+			break;
 		}
-	//}
+	}
 }
 
 void convertRGB2HSI(Mat in_image) {
@@ -349,7 +361,7 @@ void scaleImage(Mat input, float x, float y) {
 	roi.width = templateWidth;
 	roi.height = templateHeight;
 	crop = input(roi);
-	imshow("cropped", crop);
+	//imshow("cropped", crop);
 }
 
 int match(Mat input, double area) {
@@ -452,7 +464,7 @@ void game() {
 	updateScore(score);
 
 	//Avatar
-	Avatar wizard = Avatar();
+	wizard = Avatar();
 	wizard.createAvatar(1);
 
 	//Monster
@@ -470,7 +482,7 @@ void game() {
 	avatarT.loadFromFile("WizardSheet.png");
 	monsterT.loadFromFile("MonsterAll.png");
 
-	SpriteAnimation avatarAnimation(&avatarT, Vector2u(20, 4), 0.05f);
+	avatarAnimation = SpriteAnimation(&avatarT, Vector2u(20, 4), 0.05f);
 
 	for (int x = 0; x < number; x++) {
 		monster[x].anim = { &monsterT, Vector2u(20, 14), 0.05f };
@@ -502,8 +514,6 @@ void game() {
 
 	//Start the game loop in order for the window to stay open
 	while (gameWindow.isOpen()) {
-
-		imageProcessing();
 
 		while (gameWindow.pollEvent(windowEvt)) {
 
@@ -576,8 +586,11 @@ void game() {
 		for (int i = 0; i < monsterNumber; i++) {
 
 			//cout << "Monster X is " << monster[i].monsterX << endl;
+			//cout << "The returned value is " << shapeValue << endl;
 
 			monster[i].moveMonsters();
+
+			destroyMonster(i);
 
 			if (monster[i].monsterSprite.getGlobalBounds().intersects(wizard.decoyAvatarSprite.getGlobalBounds())) {
 				//cout << "Monster X for i = " << i << " is " << monster[i].monsterX << endl;
@@ -595,6 +608,7 @@ void game() {
 					monster[i].dying = 1;
 					monster[i].attack = 0;
 					a_idle = 0;
+					a_attack = 0;
 					a_damaged = 1;
 					monster[i].anim.currentImage.x = 0;
 					avatarAnimation.currentImage.x = 0;
@@ -638,8 +652,8 @@ void game() {
 					monster[i].monstersSpeed(wizard.avatarSprite.getPosition().x, wizard.avatarSprite.getPosition().y, difficulty);
 					monster[i].moveMonsters();
 
-					score += 100;
-					updateScore(score);
+					//score += 100;
+					//updateScore(score);
 
 					wizard.avatarLife--;
 				}
@@ -759,6 +773,123 @@ void separateMonsters(int i) {
 		i++;
 	}
 	cout << "The separate is running " << x << " times" << endl;
+}
+
+void destroyMonster(int i) {
+
+	if (shapeValue == 1 && (randomShape[i] == 3 || randomShape[i] == 10) && monster[i].idle == 1) {
+		a_idle = 0;
+		a_attack = 1;
+		monster[i].idle = 0;
+		monster[i].dying = 1;
+		monster[i].speedX = 0;
+		monster[i].speedY = 0;
+		monster[i].anim.currentImage.x = 0;
+		avatarAnimation.currentImage.x = 0;
+
+		score += 100;
+		updateScore(score);
+	}
+
+	if (shapeValue == 2 && (randomShape[i] == 4 || randomShape[i] == 11) && monster[i].idle == 1) {
+		a_idle = 0;
+		a_attack = 1;
+		monster[i].idle = 0;
+		monster[i].dying = 1;	
+		monster[i].speedX = 0;
+		monster[i].speedY = 0;
+		monster[i].anim.currentImage.x = 0;
+		avatarAnimation.currentImage.x = 0;
+
+		score += 100;
+		updateScore(score);
+	}
+
+	if (shapeValue == 3 && (randomShape[i] == 2 || randomShape[i] == 9) && monster[i].idle == 1) {
+		a_idle = 0;
+		a_attack = 1;
+		monster[i].idle = 0;
+		monster[i].dying = 1;
+		monster[i].speedX = 0;
+		monster[i].speedY = 0;
+		monster[i].anim.currentImage.x = 0;
+		avatarAnimation.currentImage.x = 0;
+
+		score += 100;
+		updateScore(score);
+	}
+
+	if (shapeValue == 4 && (randomShape[i] == 1 || randomShape[i] == 8) && monster[i].idle == 1) {
+		a_idle = 0;
+		a_attack = 1;
+		monster[i].idle = 0;
+		monster[i].dying = 1;
+		monster[i].speedX = 0;
+		monster[i].speedY = 0;
+		monster[i].anim.currentImage.x = 0;
+		avatarAnimation.currentImage.x = 0;
+	
+		score += 100;
+		updateScore(score);
+	}
+
+	if (shapeValue == 5 && (randomShape[i] == 0 || randomShape[i] == 7) && monster[i].idle == 1) {
+		a_idle = 0;
+		a_attack = 1;
+		monster[i].idle = 0;
+		monster[i].dying = 1;
+		monster[i].speedX = 0;
+		monster[i].speedY = 0;
+		monster[i].anim.currentImage.x = 0;
+		avatarAnimation.currentImage.x = 0;
+
+		score += 100;
+		updateScore(score);
+	}
+
+	if (monster[i].dying == 1 && a_attack == 1 && monster[i].anim.currentImage.x == 19) {
+
+		cout << "CAN YOU FIND ME HERE!!!!" << endl;
+
+		monster[i].dying = 0;
+		monster[i].idle = 1;
+		a_attack = 0;
+		a_damaged = 0;
+		a_idle = 1;
+
+		setDifficulty();
+		separateMonsters(i);
+		monster[i].monsterSprite.setPosition((float)(monster[i].monsterX), (float)(monster[i].monsterY));
+
+		randomShape[i] = rand() % 300;
+		if (randomShape[i] <= 60) {
+			randomShape[i] = 0;
+		}
+		if (randomShape[i] > 60 && randomShape[i] <= 120) {
+			randomShape[i] = 1;
+		}
+		if (randomShape[i] > 120 && randomShape[i] <= 180) {
+			randomShape[i] = 2;
+		}
+		if (randomShape[i] > 180 && randomShape[i] <= 240) {
+			randomShape[i] = 3;
+		}
+		if (randomShape[i] > 240 && randomShape[i] <= 300) {
+			randomShape[i] = 4;
+		}
+		if (monster[i].monsterX > gameW / 2) {
+			randomShape[i] += 7;
+		}
+
+		cout << "Another spawn random____________________ " << randomShape[i] << endl;
+		monster[i].anim.currentImage.y = randomShape[i];
+
+		monster[i].monstersSpeed(wizard.avatarSprite.getPosition().x, wizard.avatarSprite.getPosition().y, difficulty);
+		monster[i].moveMonsters();
+
+		/*score += 100;
+		updateScore(score);*/
+	}
 }
 
 void setDifficulty() {
