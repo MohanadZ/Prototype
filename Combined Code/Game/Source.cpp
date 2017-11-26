@@ -129,13 +129,13 @@ int main(int argc, char** argv) {
 void imageProcessing() {
 	namedWindow("Control", CV_WINDOW_NORMAL); //create a window called "Control"
 
-	int iLowH = 99;
-	int iHighH = 129;
+	int iLowH = 49;
+	int iHighH = 132;
 
-	int iLowS = 79;
+	int iLowS = 85;
 	int iHighS = 255;
 
-	int iLowI = 37;
+	int iLowI = 61;
 	int iHighI = 255;
 
 	//int iLowH = 0;	
