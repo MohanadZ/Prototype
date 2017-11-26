@@ -1,7 +1,10 @@
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 #include "SFML/Graphics.hpp"
 #include <iostream>
 #include <stdio.h>
 #include <time.h>
+#include <thread>
 
 #include "Avatar.h"
 #include "Monster.h"
@@ -9,45 +12,439 @@
 
 using namespace std;
 using namespace sf;
+using namespace cv;
 
-int idle = 1, attack, dying;
 
+//Global varibales for Image Processing
+VideoCapture cap(0); //capture the video from web cam
+Mat imgOriginal;
+Mat imgTmp;
+Mat imgLines;
+Mat imgThresholded;
+Mat templateArray[] = { imread("1.jpg", 0), imread("2.jpg", 0), imread("3.jpg", 0), imread("4.jpg", 0), imread("5.jpg", 0) };
+Mat result;
+Mat translatedImage;
+Mat crop;
+
+cv::Rect drawnShape;
+cv::Rect roi;
+
+Point centerOfImage;
+Point center;
+
+int iLastX = -1;
+int iLastY = -1;
+int posX;
+int posY;
+int templateWidth = templateArray[0].cols;
+int templateHeight = templateArray[0].rows;
+int percentage;
+int handClosed = 0;
+int shapeValue = 0;
+
+Moments oMoments;
+
+float dX;
+float dY;
+
+double dM01;
+double dM10;
+double dArea;
+double areaHand;
+double areaShape;
+
+//Global variables for the game
 Event windowEvt;		//Create an Event to be able to interact with the window; close, resize, etc.
 time_t sec;
 
-int gameW = 1920, gameH = 1080;		//The size of the game window
+int gameW = 1920, gameH = 1080;
 const int number = 7;
 int position, axis, side;
-
+int idle = 1, attack, dying;
 int score = 0;
-
 float difficulty = 0.0004f;
 int monsterNumber = 1;
 
-Clock spriteClock;
+SpriteAnimation avatarAnimation;
+Avatar wizard;
 
 Texture bgr;
 Texture hp0, hp1, hp2, hp3;
-Texture decoyAvatarTexture;
-
+Texture avatarT, monsterT, monsterRT;
 Sprite bgrSprite;
 Sprite hpSprite;
 
 Font font;
 Text scoreText;
 
+Clock spriteClock;
 Vector2u idleMonsterTextureSize;
-
 Monster monster[number];
 
 float deltaTime;
 int a_idle = 1, a_attack, a_damaged, a_dying;
+int randomShape[number];
 
+//Image Processing functions
+void imageProcessing();
+void convertRGB2HSI(Mat in_image);
+void drawLine(double contourArea);
+void translateImage(Mat input);
+void scaleImage(Mat input, float x, float y);
+int match(Mat input, double area);
+
+//Game functions 
+void game();
 void separateMonsters(int i);
+void destroyMonster(int i);
 void setDifficulty();
 void updateScore(int s);
 
 int main(int argc, char** argv) {
+	for (int i = 0; i < 5; i++) {
+		threshold(templateArray[i], templateArray[i], 127, 255, THRESH_BINARY);
+	}
+
+	if (!cap.isOpened())  // if not success, exit program
+	{
+		cout << "Cannot open the web cam" << endl;
+		return -1;
+	}
+
+	cap.set(CV_CAP_PROP_FRAME_WIDTH, 452); // Size of the camera
+	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 254);
+
+	//imageProcessing();
+	//game();
+
+	std::thread imageThread(imageProcessing);
+	std::thread gameThread(game);
+
+	imageThread.join();
+	gameThread.join();
+
+	return 0;
+}
+
+void imageProcessing() {
+	namedWindow("Control", CV_WINDOW_NORMAL); //create a window called "Control"
+
+	int iLowH = 49;
+	int iHighH = 132;
+
+	int iLowS = 85;
+	int iHighS = 255;
+
+	int iLowI = 61;
+	int iHighI = 255;
+
+	//int iLowH = 0;	
+	//int iHighH = 255;
+
+	//int iLowS = 0;
+	//int iHighS = 255;
+
+	//int iLowI = 0;
+	//int iHighI = 255;
+
+	//Create trackbars in "Control" window
+	cvCreateTrackbar("LowH", "Control", &iLowH, 179); //Hue (0 - 179)
+	cvCreateTrackbar("HighH", "Control", &iHighH, 179);
+
+	cvCreateTrackbar("LowS", "Control", &iLowS, 255); //Saturation (0 - 255)
+	cvCreateTrackbar("HighS", "Control", &iHighS, 255);
+
+	cvCreateTrackbar("LowI", "Control", &iLowI, 255); //Value (0 - 255)
+	cvCreateTrackbar("HighI", "Control", &iHighI, 255);
+
+	//Capture a temporary image from the camera
+	cap.read(imgTmp);
+
+	//Create a black image with the size as the camera output
+	imgLines = Mat::zeros(imgTmp.rows, imgTmp.cols, CV_8UC3);
+	translatedImage = Mat::zeros(imgLines.rows, imgLines.cols, CV_8UC1);
+
+	while (true)
+	{
+		bool bSuccess = cap.read(imgOriginal); // read a new frame from video
+		centerOfImage = Point(imgOriginal.cols / 2, imgOriginal.rows / 2);
+		flip(imgOriginal, imgOriginal, 1);
+		if (!bSuccess) //if not success, break loop
+		{
+			cout << "Cannot read a frame from video stream" << endl;
+			break;
+		}
+
+		vector<vector<Point> > contours;
+		vector<Vec4i> hierarchy;
+
+		convertRGB2HSI(imgOriginal);
+
+		GaussianBlur(imgOriginal, imgOriginal, Size(11, 11), 0, 0);
+		inRange(imgOriginal, Scalar(iLowH, iLowS, iLowI), Scalar(iHighH, iHighS, iHighI), imgThresholded); //Threshold the image
+
+																										   //morphological opening (remove small objects from the foreground)
+		erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+		dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+
+		//morphological closing (fill small holes in the foreground)
+		dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+		erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+
+		findContours(imgThresholded, contours, hierarchy, CV_RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));
+
+		//Calculate the moments of the thresholded image
+		oMoments = moments(imgThresholded);
+		dM01 = oMoments.m01;
+		dM10 = oMoments.m10;
+		dArea = oMoments.m00;
+
+		vector<vector<Point> > contours_poly(contours.size());
+		vector<cv::Rect> boundRect(contours.size());
+
+		for (size_t i = 0; i < contours.size(); i++)
+		{
+			areaHand = contourArea(contours[i], false); // Area of hand
+														//cout << "Area : " << areaHand << "\n";
+		}
+
+		drawLine(areaHand);
+		imshow("Thresholded Image", imgThresholded); //show the thresholded image
+
+		imgOriginal = imgOriginal + imgLines;
+		//imshow("Line", imgLines);
+		imshow("Original", imgOriginal); //show the original image
+
+		if (waitKey(1) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
+		{
+			cout << "esc key is pressed by user" << endl;
+			break;
+		}
+	}
+}
+
+void convertRGB2HSI(Mat in_image) {
+	double PI = 3.14;
+	double R = 0, G = 0, B = 0;
+	double hue = 0, saturation = 0, intensity = 0;
+	double minimum = 0;
+
+
+	for (int x = 0; x < in_image.cols; x++) {
+		for (int y = 0; y < in_image.rows; y++) {
+			B = in_image.at<Vec3b>(y, x)[0];
+			G = in_image.at<Vec3b>(y, x)[1];
+			R = in_image.at<Vec3b>(y, x)[2];
+
+			//Calculate Hue
+			if (B <= G) {
+				hue = acos(0.5 * ((R - G) + (R - B)) / sqrt((R - G) * (R - G) + (R - B) * (G - B)));
+			}
+			else if (B > G) {
+				hue = 2 * PI - acos(0.5 * ((R - G) + (R - B)) / sqrt((R - G) * (R - G) + (R - B) * (G - B)));
+			}
+
+			//Calculating Saturation
+			if (R < G && R < B)
+				minimum = R;
+
+			if (G < R && G < B)
+				minimum = G;
+
+			if (B < R && B < G)
+				minimum = B;
+
+			saturation = 1 - 3 * minimum / (R + G + B);
+
+			//Calculating Intensity
+			intensity = (R + G + B) / 3;
+
+			if (R + G + B == 0) {
+				hue = 0;
+				saturation = 0;
+				intensity = 0;
+			}
+
+			in_image.at<Vec3b>(y, x)[0] = (unsigned char)(hue * 255 / (2 * PI));
+			in_image.at<Vec3b>(y, x)[1] = (unsigned char)(saturation * 255);
+			in_image.at<Vec3b>(y, x)[2] = (unsigned char)(intensity);
+		}
+	}
+}
+
+void drawLine(double contourArea) {
+	if (contourArea > 400 && contourArea < 1300) {
+		handClosed = 1;
+		posX = (int)(dM10 / dArea);
+		posY = (int)(dM01 / dArea);
+
+		if (iLastX >= 0 && iLastY >= 0 && posX >= 0 && posY >= 0)
+		{
+			//Draw a line from the previous point to the current point
+			line(imgLines, Point(iLastX, iLastY), Point(posX, posY), Scalar(255, 255, 255), 12);
+		}
+
+		iLastX = posX;
+		iLastY = posY;
+	}
+
+	if (contourArea > 1700 && contourArea < 2700 && handClosed == 1) {
+		handClosed = 0;
+		iLastX = -1;
+		iLastY = -1;
+
+		translateImage(imgLines);
+		scaleImage(translatedImage, dX, dY);
+		match(crop, areaShape);
+		cout << "The returned value is " << shapeValue << endl;
+		//imshow("Drawn Shape", imgLines);
+		imgLines = Mat::zeros(imgTmp.size(), CV_8UC3);
+		translatedImage = Mat::zeros(imgLines.rows, imgLines.cols, CV_8UC1);
+	}
+}
+
+void translateImage(Mat input) {
+	cvtColor(input, input, CV_BGR2GRAY);
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	findContours(input, contours, hierarchy, CV_RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));
+
+	vector<vector<Point> > contours_poly(contours.size());
+	vector<cv::Rect> boundRect(contours.size());
+
+	for (size_t i = 0; i < contours.size(); i++)
+	{
+		areaShape = contourArea(contours[i], false); // Area of drawn shape
+		approxPolyDP(Mat(contours[i]), contours_poly[i], 3, true);
+		boundRect[i] = boundingRect(Mat(contours_poly[i]));
+	}
+
+	for (size_t i = 0; i < contours.size(); i++)
+	{
+		cv::Rect drawnShape(boundRect[i].tl(), boundRect[i].br());
+		center = (drawnShape.br() + drawnShape.tl())*0.5;
+		dX = (float)templateWidth / drawnShape.width;
+		dY = (float)templateHeight / drawnShape.height;
+	}
+
+	if (areaShape < 200) {
+		input = Mat::zeros(imgTmp.size(), CV_8UC3);
+	}
+	else {
+		int deltaX = centerOfImage.x - center.x;
+		int deltaY = centerOfImage.y - center.y;
+
+		for (int y = 0; y < input.rows; y++) {
+			for (int x = 0; x < input.cols; x++) {
+				int newX = x + deltaX;
+				int newY = y + deltaY;
+
+				if (input.at<uchar>(y, x) == 255) {
+					translatedImage.at<uchar>(newY, newX) = input.at<uchar>(y, x);
+				}
+			}
+		}
+	}
+	//imshow("translatedImage", translatedImage);
+}
+
+void scaleImage(Mat input, float x, float y) {
+	if (x == 0 || y == 0) {
+		x = 1;
+		y = 1;
+	}
+
+	resize(input, input, Size(), x, y);
+	//imshow("scaled", input);
+	roi.x = input.cols / 2 - templateWidth / 2;
+	roi.y = input.rows / 2 - templateHeight / 2;
+	roi.width = templateWidth;
+	roi.height = templateHeight;
+	crop = input(roi);
+	//imshow("cropped", crop);
+}
+
+int match(Mat input, double area) {
+	if (area > 1000) {
+		compare(input, templateArray[0], result, CMP_NE);
+		percentage = countNonZero(result);
+		imshow("result", result);
+		cout << "Percentage match for shape 1: " << percentage << endl;
+		if (percentage < 6000) {
+			shapeValue = 1;
+
+			cout << percentage << endl;
+			cout << "kill shape 1" << endl;
+			imshow("result", result);
+
+			return shapeValue;
+		}
+		else if (percentage > 5000) {
+			compare(input, templateArray[1], result, CMP_NE);
+			percentage = countNonZero(result);
+			cout << "Percentage match for shape 2: " << percentage << endl;
+			if (percentage < 6000) {
+				shapeValue = 2;
+
+				cout << percentage << endl;
+				cout << "kill shape 2" << endl;
+				imshow("result", result);
+
+				return shapeValue;
+			}
+			else if (percentage > 5000) {
+				compare(input, templateArray[2], result, CMP_NE);
+				percentage = countNonZero(result);
+				cout << "Percentage match for shape 3: " << percentage << endl;
+				if (percentage < 8000) {
+					shapeValue = 3;
+
+					cout << percentage << endl;
+					cout << "kill shape 3" << endl;
+					imshow("result", result);
+
+					return shapeValue;
+				}
+				else if (percentage > 5000) {
+					compare(input, templateArray[3], result, CMP_NE);
+					percentage = countNonZero(result);
+					cout << "Percentage match for shape 4: " << percentage << endl;
+					if (percentage < 8000) {
+						shapeValue = 4;
+
+						cout << percentage << endl;
+						cout << "kill shape 4" << endl;
+						imshow("result", result);
+
+						return shapeValue;
+					}
+					else if (percentage > 5000) {
+						compare(input, templateArray[4], result, CMP_NE);
+						percentage = countNonZero(result);
+						cout << "Percentage match for shape 5: " << percentage << endl;
+						if (percentage < 15000) {
+							shapeValue = 5;
+
+							cout << percentage << endl;
+							cout << "kill shape 5" << endl;
+							imshow("result", result);
+
+							return shapeValue;
+						}
+						else if (percentage > 15000) {
+							shapeValue = 0;
+						}
+					}
+				}
+			}
+		}
+	}
+	else {
+		shapeValue = 0;
+	}
+}
+
+void game() {
 	time(&sec);
 	srand((unsigned char)sec);
 
@@ -67,8 +464,7 @@ int main(int argc, char** argv) {
 	updateScore(score);
 
 	//Avatar
-	Avatar wizard = Avatar();
-
+	wizard = Avatar();
 	wizard.createAvatar(1);
 
 	//Monster
@@ -77,46 +473,48 @@ int main(int argc, char** argv) {
 		separateMonsters(i);
 
 		monster[i].monsterSprite.setPosition((float)(monster[i].monsterX), (float)(monster[i].monsterY));
-
 		monster[i].monstersSpeed(wizard.avatarSprite.getPosition().x, wizard.avatarSprite.getPosition().y, difficulty);
+
+		//cout << monster[i].monsterX << endl;
 	}
 
-	Texture avatarT, monsterT, monsterRT;
+	//Sprite Animation
 	avatarT.loadFromFile("WizardSheet.png");
-	monsterT.loadFromFile("MonsterSheet.png");
+	monsterT.loadFromFile("MonsterAll.png");
 
-	SpriteAnimation avatarAnimation(&avatarT, Vector2u(20, 4), 0.05f);
+	avatarAnimation = SpriteAnimation(&avatarT, Vector2u(20, 4), 0.05f);
 
 	for (int x = 0; x < number; x++) {
-		monster[x].anim = { &monsterT, Vector2u(20, 4), 0.05f };
+		monster[x].anim = { &monsterT, Vector2u(20, 14), 0.05f };
 	}
 
-	int testShape[number];
-	for (int i = 0; i < number; i++) {
-		testShape[i] = rand() % 300;
-		if (testShape[i] <= 60) {
-			testShape[i] = 0;
+	//Spawn different shapes
+	for (int i = 0; i < sizeof(monster) / sizeof(monster[0]); i++) {
+		randomShape[i] = rand() % 300;
+		if (randomShape[i] <= 60) {
+			randomShape[i] = 0;
 		}
-		if (testShape[i] <= 120 && testShape[i] > 60) {
-			testShape[i] = 1;
+		if (randomShape[i] > 60 && randomShape[i] <= 120) {
+			randomShape[i] = 1;
 		}
-		if (testShape[i] <= 180 && testShape[i] > 120) {
-			testShape[i] = 2;
+		if (randomShape[i] > 120 && randomShape[i] <= 180) {
+			randomShape[i] = 2;
 		}
-		if (testShape[i] <= 240 && testShape[i] > 180) {
-			testShape[i] = 3;
+		if (randomShape[i] > 180 && randomShape[i] <= 240) {
+			randomShape[i] = 3;
 		}
-		if (testShape[i] <= 300 && testShape[i] > 240) {
-			testShape[i] = 4;
+		if (randomShape[i] > 240 && randomShape[i] <= 300) {
+			randomShape[i] = 4;
 		}
 		if (monster[i].monsterX > gameW / 2) {
-			testShape[i] += 5;
+			randomShape[i] += 7;
 		}
-		cout << "................................." << testShape[i] << endl;
+		cout << "................................." << randomShape[i] << endl;
 	}
 
 	//Start the game loop in order for the window to stay open
 	while (gameWindow.isOpen()) {
+
 		while (gameWindow.pollEvent(windowEvt)) {
 
 			//Switch case for handling the events performed when interacting with the game window
@@ -157,25 +555,44 @@ int main(int argc, char** argv) {
 		}
 
 		//Update the animation of the monster sprite
-		for (int z = 0; z < number; z++) {
-			if (monster[z].idle == 1) {
-				monster[z].anim.updateAnimation(testShape[z], deltaTime);
-					monster[z].monsterSprite.setTextureRect(monster[z].anim.textureRect);
+		for (int i = 0; i < number; i++) {
+			if (monster[i].idle == 1) {
+				monster[i].anim.updateAnimation(randomShape[i], deltaTime);
+				monster[i].monsterSprite.setTextureRect(monster[i].anim.textureRect);
 			}
-			if (monster[z].attack == 1) {
-				monster[z].anim.updateAnimation(2, deltaTime);
-				monster[z].monsterSprite.setTextureRect(monster[z].anim.textureRect);
+			if (monster[i].attack == 1) {
+				if (monster[i].monsterX <= gameW / 2) {
+					monster[i].anim.updateAnimation(5, deltaTime);
+					monster[i].monsterSprite.setTextureRect(monster[i].anim.textureRect);
+				}
+				if (monster[i].monsterX > gameW / 2) {
+					monster[i].anim.updateAnimation(12, deltaTime);
+					monster[i].monsterSprite.setTextureRect(monster[i].anim.textureRect);
+				}
 			}
-			if (monster[z].dying == 1) {
-				monster[z].anim.updateAnimation(3, deltaTime);
-				monster[z].monsterSprite.setTextureRect(monster[z].anim.textureRect);
+			if (monster[i].dying == 1) {
+				if (monster[i].monsterX <= gameW / 2) {
+					monster[i].anim.updateAnimation(6, deltaTime);
+					monster[i].monsterSprite.setTextureRect(monster[i].anim.textureRect);
+				}
+				if (monster[i].monsterX > gameW / 2) {
+					monster[i].anim.updateAnimation(13, deltaTime);
+					monster[i].monsterSprite.setTextureRect(monster[i].anim.textureRect);
+				}
 			}
 		}
 
+		//Move the monster, switch between the different animations, and reposition the monster when it dies
 		for (int i = 0; i < monsterNumber; i++) {
+
+			//cout << "Monster X is " << monster[i].monsterX << endl;
+			//cout << "The returned value is " << shapeValue << endl;
+
 			monster[i].moveMonsters();
 
 			if (monster[i].monsterSprite.getGlobalBounds().intersects(wizard.decoyAvatarSprite.getGlobalBounds())) {
+				//cout << "Monster X for i = " << i << " is " << monster[i].monsterX << endl;
+
 				if (monster[i].idle == 1) {
 					monster[i].idle = 0;
 					monster[i].attack = 1;
@@ -185,64 +602,62 @@ int main(int argc, char** argv) {
 					avatarAnimation.currentImage.x = 0;
 				}
 
-				if (monster[i].attack == 1 && monster[i].anim.currentImage.x == 19){ //&& avatarAnimation.currentImage.x == 19) {
+				if (monster[i].attack == 1 && monster[i].anim.currentImage.x == 19) {
 					monster[i].dying = 1;
 					monster[i].attack = 0;
 					a_idle = 0;
+					a_attack = 0;
 					a_damaged = 1;
 					monster[i].anim.currentImage.x = 0;
 					avatarAnimation.currentImage.x = 0;
 				}
-			
-				if (monster[i].dying == 1 && monster[i].anim.currentImage.x == 19){ //&& avatarAnimation.currentImage.x == 19) {
+
+				if (monster[i].dying == 1 && monster[i].anim.currentImage.x == 19) {
 					monster[i].dying = 0;
 					monster[i].idle = 1;
 					a_damaged = 0;
 					a_idle = 1;
+
 					setDifficulty();
-
 					separateMonsters(i);
-
 					monster[i].monsterSprite.setPosition((float)(monster[i].monsterX), (float)(monster[i].monsterY));
 
-					testShape[i] = rand() % 300;
-					
-					//for (int i = 0; i < number; i++) {
-						testShape[i] = rand() % 300;
-						if (testShape[i] <= 60) {
-							testShape[i] = 0;
-						}
-						if (testShape[i] <= 120 && testShape[i] > 60) {
-							testShape[i] = 1;
-						}
-						if (testShape[i] <= 180 && testShape[i] > 120) {
-							testShape[i] = 2;
-						}
-						if (testShape[i] <= 240 && testShape[i] > 180) {
-							testShape[i] = 3;
-						}
-						if (testShape[i] <= 300 && testShape[i] > 240) {
-							testShape[i] = 4;
-						}
-						if (monster[i].monsterX > gameW / 2) {
-							testShape[i] += 5;
-						}
+					randomShape[i] = rand() % 300;
+					if (randomShape[i] <= 60) {
+						randomShape[i] = 0;
+					}
+					if (randomShape[i] > 60 && randomShape[i] <= 120) {
+						randomShape[i] = 1;
+					}
+					if (randomShape[i] > 120 && randomShape[i] <= 180) {
+						randomShape[i] = 2;
+					}
+					if (randomShape[i] > 180 && randomShape[i] <= 240) {
+						randomShape[i] = 3;
+					}
+					if (randomShape[i] > 240 && randomShape[i] <= 300) {
+						randomShape[i] = 4;
+					}
+					if (monster[i].monsterX > gameW / 2) {
+						randomShape[i] += 7;
+					}
 
-						cout << "Another spawn random____________________ " << testShape[i] << endl;
-					//}
-				
-					monster[i].anim.currentImage.y = testShape[i];
+					//cout << "Monster X for i = " << i << " is " << monster[i].monsterX << endl;
+
+					cout << "Another spawn random____________________ " << randomShape[i] << endl;
+					monster[i].anim.currentImage.y = randomShape[i];
 
 					monster[i].monstersSpeed(wizard.avatarSprite.getPosition().x, wizard.avatarSprite.getPosition().y, difficulty);
 					monster[i].moveMonsters();
 
-					score += 100;
-					updateScore(score);
+					//score += 100;
+					//updateScore(score);
 
 					wizard.avatarLife--;
 				}
-
 			}
+
+			destroyMonster(i);
 		}
 
 		//cout << "The avatar's hp is " << wizard.avatarLife << endl;
@@ -273,8 +688,6 @@ int main(int argc, char** argv) {
 		}
 		gameWindow.display();
 	}
-
-	return 0;
 }
 
 //Spawn the monsters without them overlapping 
@@ -283,7 +696,7 @@ void separateMonsters(int i) {
 
 	idleMonsterTextureSize = monster[0].monsterTexture.getSize();
 	idleMonsterTextureSize.x /= 20;
-	idleMonsterTextureSize.y /= 4;
+	idleMonsterTextureSize.y /= 14;
 
 	while (i < sizeof(monster) / sizeof(monster[0])) {
 		//axis = 0, side = 0	top edge
@@ -362,6 +775,108 @@ void separateMonsters(int i) {
 	cout << "The separate is running " << x << " times" << endl;
 }
 
+void destroyMonster(int i) {
+
+	if (shapeValue == 1 && (randomShape[i] == 3 || randomShape[i] == 10) && monster[i].idle == 1) {
+		a_idle = 0;
+		a_attack = 1;
+		monster[i].idle = 0;
+		monster[i].dying = 1;
+		monster[i].speedX = 0;
+		monster[i].speedY = 0;
+		monster[i].anim.currentImage.x = 0;
+		avatarAnimation.currentImage.x = 0;
+	}
+
+	if (shapeValue == 2 && (randomShape[i] == 4 || randomShape[i] == 11) && monster[i].idle == 1) {
+		a_idle = 0;
+		a_attack = 1;
+		monster[i].idle = 0;
+		monster[i].dying = 1;	
+		monster[i].speedX = 0;
+		monster[i].speedY = 0;
+		monster[i].anim.currentImage.x = 0;
+		avatarAnimation.currentImage.x = 0;
+	}
+
+	if (shapeValue == 3 && (randomShape[i] == 2 || randomShape[i] == 9) && monster[i].idle == 1) {
+		a_idle = 0;
+		a_attack = 1;
+		monster[i].idle = 0;
+		monster[i].dying = 1;
+		monster[i].speedX = 0;
+		monster[i].speedY = 0;
+		monster[i].anim.currentImage.x = 0;
+		avatarAnimation.currentImage.x = 0;
+	}
+
+	if (shapeValue == 4 && (randomShape[i] == 1 || randomShape[i] == 8) && monster[i].idle == 1) {
+		a_idle = 0;
+		a_attack = 1;
+		monster[i].idle = 0;
+		monster[i].dying = 1;
+		monster[i].speedX = 0;
+		monster[i].speedY = 0;
+		monster[i].anim.currentImage.x = 0;
+		avatarAnimation.currentImage.x = 0;
+	}
+
+	if (shapeValue == 5 && (randomShape[i] == 0 || randomShape[i] == 7) && monster[i].idle == 1) {
+		a_idle = 0;
+		a_attack = 1;
+		monster[i].idle = 0;
+		monster[i].dying = 1;
+		monster[i].speedX = 0;
+		monster[i].speedY = 0;
+		monster[i].anim.currentImage.x = 0;
+		avatarAnimation.currentImage.x = 0;
+	}
+
+	if (monster[i].dying == 1 && monster[i].anim.currentImage.x == 19) {
+
+		cout << "CAN YOU FIND ME HERE!!!!" << endl;
+
+		monster[i].dying = 0;
+		monster[i].idle = 1;
+		a_attack = 0;
+		a_damaged = 0;
+		a_idle = 1;
+
+		setDifficulty();
+		separateMonsters(i);
+		monster[i].monsterSprite.setPosition((float)(monster[i].monsterX), (float)(monster[i].monsterY));
+
+		randomShape[i] = rand() % 300;
+		if (randomShape[i] <= 60) {
+			randomShape[i] = 0;
+		}
+		if (randomShape[i] > 60 && randomShape[i] <= 120) {
+			randomShape[i] = 1;
+		}
+		if (randomShape[i] > 120 && randomShape[i] <= 180) {
+			randomShape[i] = 2;
+		}
+		if (randomShape[i] > 180 && randomShape[i] <= 240) {
+			randomShape[i] = 3;
+		}
+		if (randomShape[i] > 240 && randomShape[i] <= 300) {
+			randomShape[i] = 4;
+		}
+		if (monster[i].monsterX > gameW / 2) {
+			randomShape[i] += 7;
+		}
+
+		cout << "Another spawn random____________________ " << randomShape[i] << endl;
+		monster[i].anim.currentImage.y = randomShape[i];
+
+		monster[i].monstersSpeed(wizard.avatarSprite.getPosition().x, wizard.avatarSprite.getPosition().y, difficulty);
+		monster[i].moveMonsters();
+
+		score += 100;
+		updateScore(score);
+	}
+}
+
 void setDifficulty() {
 	difficulty += 0.000005f;
 	if (difficulty >= 0.00041) {
@@ -386,7 +901,7 @@ void setDifficulty() {
 
 void updateScore(int s) {
 	//Font & Text
-	String currentScore = "SCORE  " + to_string(s);
+	std::string currentScore = "SCORE  " + to_string(s);
 
 	font.loadFromFile("Pixeled.ttf");
 	scoreText = Text(currentScore, font, 24);

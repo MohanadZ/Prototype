@@ -13,7 +13,7 @@ Monster::Monster() {}
 
 void Monster::loadTexture(int label) {
 	if (label == 0) {
-		monsterTexture.loadFromFile("MonsterSheet.png");
+		monsterTexture.loadFromFile("MonsterAll.png");
 	}
 	monsterSprite.setTexture(monsterTexture);
 	monsterSprite.setScale(scaleW, scaleH);

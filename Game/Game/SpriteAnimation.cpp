@@ -3,6 +3,7 @@
 
 using namespace std;
 
+SpriteAnimation::SpriteAnimation() {}
 
 SpriteAnimation::SpriteAnimation(Texture* texture, Vector2u imageCount, float switchImageTime) :
 	imageCount(imageCount),
