@@ -10,7 +10,7 @@ class Avatar
 private:
 	int gameW = 1920, gameH = 1080;	
 	float avatarX, avatarY;
-	float avatarW = 0.75f, avatarH = 0.75f;
+	float avatarW = 0.8f, avatarH = 0.8f;
 
 public:
 	int avatarLife = 3;

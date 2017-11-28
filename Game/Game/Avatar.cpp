@@ -26,10 +26,15 @@ void Avatar::createAvatar(int avatarLabel) {
 	avatarY = (float) avatarTextureSize.y;
 
 	avatarSprite.setScale(avatarW, avatarH);
-	decoyAvatarSprite.setScale(avatarW / 31.5f, avatarH / 4);
+	decoyAvatarSprite.setScale(avatarW / 55.0f, avatarH / 5.2f);
 
-	avatarSprite.setPosition((float)(gameW / 2) - (avatarX * avatarW) / 2, (float)(gameH / 2) - (avatarY * avatarH) / 2);
-	decoyAvatarSprite.setPosition((float)(gameW / 2) - (avatarX * avatarW) / 2, (float)(gameH / 2) - (avatarY * avatarH) / 2);
+	avatarSprite.setOrigin(avatarSprite.getGlobalBounds().width / 40 , avatarSprite.getGlobalBounds().height / 40);
+	avatarSprite.setPosition((float)(gameW / 2) + 20.0f, (float)(gameH / 2) - (float)gameH * 0.05f);
+
+	decoyAvatarSprite.setOrigin(avatarSprite.getGlobalBounds().width / 40 - 30.0f, avatarSprite.getGlobalBounds().height / 40);
+	decoyAvatarSprite.setPosition((float)(gameW / 2) - 40.0f, (float)(gameH / 2) - (float)gameH * 0.05f);
+
+	//decoyAvatarSprite.setPosition((float)(gameW / 2) - (avatarX * avatarW) / 2, (float)(gameH / 2) - (avatarY * avatarH) / 2);
 
 	cout << "................... >:( " << endl;
 }

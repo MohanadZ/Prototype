@@ -21,7 +21,8 @@ Mat imgOriginal;
 Mat imgTmp;
 Mat imgLines;
 Mat imgThresholded;
-Mat templateArray[] = { imread("1.jpg", 0), imread("2.jpg", 0), imread("3.jpg", 0), imread("4.jpg", 0), imread("5.jpg", 0) };
+Mat templateArray[] = { imread("1.jpg", 0), imread("2.jpg", 0), imread("3.jpg", 0), imread("4.jpg", 0), imread("5.jpg", 0), imread("6.jpg", 0) };
+Mat resultStart;
 Mat result;
 Mat translatedImage;
 Mat crop;
@@ -39,6 +40,7 @@ int posY;
 int templateWidth = templateArray[0].cols;
 int templateHeight = templateArray[0].rows;
 int percentage;
+int percentageStart;
 int handClosed = 0;
 int shapeValue = 0;
 
@@ -62,16 +64,16 @@ const int number = 7;
 int position, axis, side;
 int idle = 1, attack, dying;
 int score = 0;
-float difficulty = 0.0004f;
+float difficulty = 0.0001f;
 int monsterNumber = 1;
 
 SpriteAnimation avatarAnimation;
 Avatar wizard;
 
-Texture bgr;
+Texture startTexture, bgr, endTexture;
 Texture hp0, hp1, hp2, hp3;
 Texture avatarT, monsterT, monsterRT;
-Sprite bgrSprite;
+Sprite startSprite, bgrSprite, endSprite;
 Sprite hpSprite;
 
 Font font;
@@ -101,7 +103,7 @@ void setDifficulty();
 void updateScore(int s);
 
 int main(int argc, char** argv) {
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < sizeof(templateArray) / sizeof(templateArray[0]); i++) {
 		threshold(templateArray[i], templateArray[i], 127, 255, THRESH_BINARY);
 	}
 
@@ -129,7 +131,7 @@ int main(int argc, char** argv) {
 void imageProcessing() {
 	namedWindow("Control", CV_WINDOW_NORMAL); //create a window called "Control"
 
-	int iLowH = 49;
+	int iLowH = 99;
 	int iHighH = 132;
 
 	int iLowS = 85;
@@ -366,6 +368,13 @@ void scaleImage(Mat input, float x, float y) {
 
 int match(Mat input, double area) {
 	if (area > 1000) {
+		compare(input, templateArray[5], resultStart, CMP_NE);
+		percentageStart = countNonZero(resultStart);
+		if (percentageStart < 11000) {
+			shapeValue = 6;
+			return shapeValue;
+		}
+		//imshow("test2", resultStart);
 		compare(input, templateArray[0], result, CMP_NE);
 		percentage = countNonZero(result);
 		imshow("result", result);
@@ -448,12 +457,28 @@ void game() {
 	time(&sec);
 	srand((unsigned char)sec);
 
+	//Create a window for the end screen
+	RenderWindow endWindow(VideoMode((unsigned int)gameW, (unsigned int)gameH), "End Screen", Style::Fullscreen);
+
 	//Create a window for the game
-	RenderWindow gameWindow(VideoMode((unsigned int)gameW, (unsigned int)gameH), "Game", Style::Default);
+	RenderWindow gameWindow(VideoMode((unsigned int)gameW, (unsigned int)gameH), "Game", Style::Fullscreen);
+
+	//Create a window for the start screen
+	RenderWindow startWindow(VideoMode((unsigned int)gameW, (unsigned int)gameH), "Start Screen", Style::Fullscreen);
+
+
+	//Start Screen
+	startTexture.loadFromFile("Startscreen.png");
+	startSprite.setTexture(startTexture);
 
 	//Background 
 	bgr.loadFromFile("Background.png");
 	bgrSprite.setTexture(bgr);
+	//bgrSprite.setOrigin(bgrSprite.getGlobalBounds().width / 2, bgrSprite.getGlobalBounds().width / 2);
+
+	//End Screen
+	endTexture.loadFromFile("Endscreen.png");
+	endSprite.setTexture(endTexture);
 
 	//Avatar HP
 	hp0.loadFromFile("Hearts0.png");
@@ -473,7 +498,7 @@ void game() {
 		separateMonsters(i);
 
 		monster[i].monsterSprite.setPosition((float)(monster[i].monsterX), (float)(monster[i].monsterY));
-		monster[i].monstersSpeed(wizard.avatarSprite.getPosition().x, wizard.avatarSprite.getPosition().y, difficulty);
+		monster[i].monstersSpeed(wizard.decoyAvatarSprite.getPosition().x, wizard.decoyAvatarSprite.getPosition().y, difficulty);
 
 		//cout << monster[i].monsterX << endl;
 	}
@@ -512,7 +537,23 @@ void game() {
 		cout << "................................." << randomShape[i] << endl;
 	}
 
-	//Start the game loop in order for the window to stay open
+	//Start the start screen loop
+	while (startWindow.isOpen()) {
+		startWindow.draw(startSprite);
+		startWindow.display();
+
+		//gameWindow.setVisible(false);
+		//endWindow.setVisible(false);
+
+		if (shapeValue == 6) {
+
+			break;
+		}
+	}
+
+	startWindow.close();
+
+	//Start the game loop 
 	while (gameWindow.isOpen()) {
 
 		while (gameWindow.pollEvent(windowEvt)) {
@@ -616,6 +657,7 @@ void game() {
 					monster[i].dying = 0;
 					monster[i].idle = 1;
 					a_damaged = 0;
+					a_attack = 0;
 					a_idle = 1;
 
 					setDifficulty();
@@ -647,7 +689,7 @@ void game() {
 					cout << "Another spawn random____________________ " << randomShape[i] << endl;
 					monster[i].anim.currentImage.y = randomShape[i];
 
-					monster[i].monstersSpeed(wizard.avatarSprite.getPosition().x, wizard.avatarSprite.getPosition().y, difficulty);
+					monster[i].monstersSpeed(wizard.decoyAvatarSprite.getPosition().x, wizard.decoyAvatarSprite.getPosition().y, difficulty);
 					monster[i].moveMonsters();
 
 					//score += 100;
@@ -672,6 +714,8 @@ void game() {
 		}
 		else if (wizard.avatarLife == 0) {
 			hpSprite.setTexture(hp0);
+
+			break;
 		}
 		if (wizard.avatarLife < 0) {
 			wizard.avatarLife = 0;
@@ -687,6 +731,21 @@ void game() {
 			gameWindow.draw(monster[i].monsterSprite);
 		}
 		gameWindow.display();
+	}
+
+	gameWindow.close();
+
+	while (endWindow.isOpen()) {
+		hpSprite.setTexture(hp0);
+
+		endWindow.draw(endSprite);
+		endWindow.draw(hpSprite);
+
+		scoreText.setOrigin(scoreText.getGlobalBounds().width / 2, scoreText.getGlobalBounds().height / 2);
+		scoreText.setPosition((float)gameW / 2, (float)gameH * 0.8f);
+		endWindow.draw(scoreText);
+
+		endWindow.display();
 	}
 }
 
@@ -730,14 +789,14 @@ void separateMonsters(int i) {
 
 		if (side == 0 && axis == 0) {
 			monster[i].monsterX = (float)position;
-			monster[i].monsterY = -140;
+			monster[i].monsterY = -150;
 		}
 		else if (side == 1 && axis == 0) {
 			monster[i].monsterX = (float)position;
 			monster[i].monsterY = (float)gameH + 51;
 		}
 		else if (side == 0 && axis == 1) {
-			monster[i].monsterX = -140;
+			monster[i].monsterX = -150;
 			monster[i].monsterY = (float)position;
 		}
 		else if (side == 1 && axis == 1) {
@@ -777,62 +836,65 @@ void separateMonsters(int i) {
 
 void destroyMonster(int i) {
 
-	if (shapeValue == 1 && (randomShape[i] == 3 || randomShape[i] == 10) && monster[i].idle == 1) {
-		a_idle = 0;
-		a_attack = 1;
-		monster[i].idle = 0;
-		monster[i].dying = 1;
-		monster[i].speedX = 0;
-		monster[i].speedY = 0;
-		monster[i].anim.currentImage.x = 0;
-		avatarAnimation.currentImage.x = 0;
-	}
+	for (int i = 0; i < monsterNumber; i++) {
+		if (shapeValue == 1 && (randomShape[i] == 3 || randomShape[i] == 10) && monster[i].idle == 1) {
+			a_idle = 0;
+			a_attack = 1;
+			monster[i].idle = 0;
+			monster[i].dying = 1;
+			monster[i].speedX = 0;
+			monster[i].speedY = 0;
+			monster[i].anim.currentImage.x = 0;
+			avatarAnimation.currentImage.x = 0;
+		}
 
-	if (shapeValue == 2 && (randomShape[i] == 4 || randomShape[i] == 11) && monster[i].idle == 1) {
-		a_idle = 0;
-		a_attack = 1;
-		monster[i].idle = 0;
-		monster[i].dying = 1;	
-		monster[i].speedX = 0;
-		monster[i].speedY = 0;
-		monster[i].anim.currentImage.x = 0;
-		avatarAnimation.currentImage.x = 0;
-	}
+		if (shapeValue == 2 && (randomShape[i] == 4 || randomShape[i] == 11) && monster[i].idle == 1) {
+			a_idle = 0;
+			a_attack = 1;
+			monster[i].idle = 0;
+			monster[i].dying = 1;
+			monster[i].speedX = 0;
+			monster[i].speedY = 0;
+			monster[i].anim.currentImage.x = 0;
+			avatarAnimation.currentImage.x = 0;
+		}
 
-	if (shapeValue == 3 && (randomShape[i] == 2 || randomShape[i] == 9) && monster[i].idle == 1) {
-		a_idle = 0;
-		a_attack = 1;
-		monster[i].idle = 0;
-		monster[i].dying = 1;
-		monster[i].speedX = 0;
-		monster[i].speedY = 0;
-		monster[i].anim.currentImage.x = 0;
-		avatarAnimation.currentImage.x = 0;
-	}
+		if (shapeValue == 3 && (randomShape[i] == 2 || randomShape[i] == 9) && monster[i].idle == 1) {
+			a_idle = 0;
+			a_attack = 1;
+			monster[i].idle = 0;
+			monster[i].dying = 1;
+			monster[i].speedX = 0;
+			monster[i].speedY = 0;
+			monster[i].anim.currentImage.x = 0;
+			avatarAnimation.currentImage.x = 0;
+		}
 
-	if (shapeValue == 4 && (randomShape[i] == 1 || randomShape[i] == 8) && monster[i].idle == 1) {
-		a_idle = 0;
-		a_attack = 1;
-		monster[i].idle = 0;
-		monster[i].dying = 1;
-		monster[i].speedX = 0;
-		monster[i].speedY = 0;
-		monster[i].anim.currentImage.x = 0;
-		avatarAnimation.currentImage.x = 0;
-	}
+		if (shapeValue == 4 && (randomShape[i] == 1 || randomShape[i] == 8) && monster[i].idle == 1) {
+			a_idle = 0;
+			a_attack = 1;
+			monster[i].idle = 0;
+			monster[i].dying = 1;
+			monster[i].speedX = 0;
+			monster[i].speedY = 0;
+			monster[i].anim.currentImage.x = 0;
+			avatarAnimation.currentImage.x = 0;
+		}
 
-	if (shapeValue == 5 && (randomShape[i] == 0 || randomShape[i] == 7) && monster[i].idle == 1) {
-		a_idle = 0;
-		a_attack = 1;
-		monster[i].idle = 0;
-		monster[i].dying = 1;
-		monster[i].speedX = 0;
-		monster[i].speedY = 0;
-		monster[i].anim.currentImage.x = 0;
-		avatarAnimation.currentImage.x = 0;
+		if (shapeValue == 5 && (randomShape[i] == 0 || randomShape[i] == 7) && monster[i].idle == 1) {
+			a_idle = 0;
+			a_attack = 1;
+			monster[i].idle = 0;
+			monster[i].dying = 1;
+			monster[i].speedX = 0;
+			monster[i].speedY = 0;
+			monster[i].anim.currentImage.x = 0;
+			avatarAnimation.currentImage.x = 0;
+		}
 	}
+	shapeValue = 0;
 
-	if (monster[i].dying == 1 && monster[i].anim.currentImage.x == 19) {
+	if (monster[i].dying == 1 && !monster[i].monsterSprite.getGlobalBounds().intersects(wizard.decoyAvatarSprite.getGlobalBounds()) && monster[i].anim.currentImage.x == 19) {
 
 		cout << "CAN YOU FIND ME HERE!!!!" << endl;
 
@@ -869,7 +931,7 @@ void destroyMonster(int i) {
 		cout << "Another spawn random____________________ " << randomShape[i] << endl;
 		monster[i].anim.currentImage.y = randomShape[i];
 
-		monster[i].monstersSpeed(wizard.avatarSprite.getPosition().x, wizard.avatarSprite.getPosition().y, difficulty);
+		monster[i].monstersSpeed(wizard.decoyAvatarSprite.getPosition().x, wizard.decoyAvatarSprite.getPosition().y, difficulty);
 		monster[i].moveMonsters();
 
 		score += 100;
@@ -878,23 +940,23 @@ void destroyMonster(int i) {
 }
 
 void setDifficulty() {
-	difficulty += 0.000005f;
-	if (difficulty >= 0.00041) {
+	difficulty += 0.000025f;
+	if (difficulty >= 0.00018) {
 		monsterNumber = 2;
 	}
-	if (difficulty >= 0.00045) {
+	if (difficulty >= 0.00038) {
 		monsterNumber = 3;
 	}
-	if (difficulty >= 0.00051) {
+	if (difficulty >= 0.0006) {
 		monsterNumber = 4;
 	}
-	if (difficulty >= 0.00062) {
+	if (difficulty >= 0.0009) {
 		monsterNumber = 5;
 	}
-	if (difficulty >= 0.00073) {
+	if (difficulty >= 0.0015) {
 		monsterNumber = 6;
 	}
-	if (difficulty >= 0.00085) {
+	if (difficulty >= 0.0022) {
 		monsterNumber = 7;
 	}
 }
@@ -905,7 +967,9 @@ void updateScore(int s) {
 
 	font.loadFromFile("Pixeled.ttf");
 	scoreText = Text(currentScore, font, 24);
-	scoreText.setFillColor(Color::Yellow);
+
+	Color c(0xfbb03bff);
+	scoreText.setFillColor(c);
 	scoreText.setStyle(Text::Italic | Text::Bold);
 	scoreText.setOrigin(scoreText.getGlobalBounds().width / 2, scoreText.getGlobalBounds().height / 2);
 	scoreText.setPosition((float)gameW - 230, (float)30);
