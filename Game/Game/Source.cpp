@@ -16,7 +16,7 @@ using namespace cv;
 
 
 //Global varibales for Image Processing
-VideoCapture cap(0); //capture the video from web cam
+VideoCapture cap(1); //capture the video from web cam
 Mat imgOriginal;
 Mat imgTmp;
 Mat imgLines;
@@ -129,16 +129,16 @@ int main(int argc, char** argv) {
 }
 
 void imageProcessing() {
-	namedWindow("Control", CV_WINDOW_NORMAL); //create a window called "Control"
+	//namedWindow("Control", CV_WINDOW_NORMAL); //create a window called "Control"
 
-	int iLowH = 99;
-	int iHighH = 132;
+	int iLowH = 90;
+	int iHighH = 120;
 
-	int iLowS = 85;
+	int iLowS = 89;
 	int iHighS = 255;
 
-	int iLowI = 61;
-	int iHighI = 255;
+	int iLowI = 41;
+	int iHighI = 132;
 
 	//int iLowH = 0;	
 	//int iHighH = 255;
@@ -207,11 +207,11 @@ void imageProcessing() {
 		for (size_t i = 0; i < contours.size(); i++)
 		{
 			areaHand = contourArea(contours[i], false); // Area of hand
-														//cout << "Area : " << areaHand << "\n";
+			cout << "Area : " << areaHand << "\n";
 		}
 
 		drawLine(areaHand);
-		imshow("Thresholded Image", imgThresholded); //show the thresholded image
+		//imshow("Thresholded Image", imgThresholded); //show the thresholded image
 
 		imgOriginal = imgOriginal + imgLines;
 		//imshow("Line", imgLines);
@@ -275,7 +275,7 @@ void convertRGB2HSI(Mat in_image) {
 }
 
 void drawLine(double contourArea) {
-	if (contourArea > 400 && contourArea < 1300) {
+	if (contourArea > 100 && contourArea < 550) {
 		handClosed = 1;
 		posX = (int)(dM10 / dArea);
 		posY = (int)(dM01 / dArea);
@@ -290,7 +290,7 @@ void drawLine(double contourArea) {
 		iLastY = posY;
 	}
 
-	if (contourArea > 1700 && contourArea < 2700 && handClosed == 1) {
+	if (contourArea > 650 && handClosed == 1) {
 		handClosed = 0;
 		iLastX = -1;
 		iLastY = -1;
@@ -405,7 +405,7 @@ int match(Mat input, double area) {
 				compare(input, templateArray[2], result, CMP_NE);
 				percentage = countNonZero(result);
 				cout << "Percentage match for shape 3: " << percentage << endl;
-				if (percentage < 8000) {
+				if (percentage < 9000) {
 					shapeValue = 3;
 
 					cout << percentage << endl;
@@ -418,7 +418,7 @@ int match(Mat input, double area) {
 					compare(input, templateArray[3], result, CMP_NE);
 					percentage = countNonZero(result);
 					cout << "Percentage match for shape 4: " << percentage << endl;
-					if (percentage < 8000) {
+					if (percentage < 9000) {
 						shapeValue = 4;
 
 						cout << percentage << endl;
@@ -831,7 +831,7 @@ void separateMonsters(int i) {
 		}
 		i++;
 	}
-	cout << "The separate is running " << x << " times" << endl;
+	//cout << "The separate is running " << x << " times" << endl;
 }
 
 void destroyMonster(int i) {
@@ -895,8 +895,6 @@ void destroyMonster(int i) {
 	shapeValue = 0;
 
 	if (monster[i].dying == 1 && !monster[i].monsterSprite.getGlobalBounds().intersects(wizard.decoyAvatarSprite.getGlobalBounds()) && monster[i].anim.currentImage.x == 19) {
-
-		cout << "CAN YOU FIND ME HERE!!!!" << endl;
 
 		monster[i].dying = 0;
 		monster[i].idle = 1;
