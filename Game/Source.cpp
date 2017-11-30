@@ -845,6 +845,9 @@ void destroyMonster(int i) {
 			monster[i].speedY = 0;
 			monster[i].anim.currentImage.x = 0;
 			avatarAnimation.currentImage.x = 0;
+
+			score += 50;
+			updateScore(score);
 		}
 
 		if (shapeValue == 2 && (randomShape[i] == 4 || randomShape[i] == 11) && monster[i].idle == 1) {
@@ -856,6 +859,9 @@ void destroyMonster(int i) {
 			monster[i].speedY = 0;
 			monster[i].anim.currentImage.x = 0;
 			avatarAnimation.currentImage.x = 0;
+
+			score += 50;
+			updateScore(score);
 		}
 
 		if (shapeValue == 3 && (randomShape[i] == 2 || randomShape[i] == 9) && monster[i].idle == 1) {
@@ -867,6 +873,9 @@ void destroyMonster(int i) {
 			monster[i].speedY = 0;
 			monster[i].anim.currentImage.x = 0;
 			avatarAnimation.currentImage.x = 0;
+
+			score += 100;
+			updateScore(score);
 		}
 
 		if (shapeValue == 4 && (randomShape[i] == 1 || randomShape[i] == 8) && monster[i].idle == 1) {
@@ -878,6 +887,9 @@ void destroyMonster(int i) {
 			monster[i].speedY = 0;
 			monster[i].anim.currentImage.x = 0;
 			avatarAnimation.currentImage.x = 0;
+
+			score += 100;
+			updateScore(score);
 		}
 
 		if (shapeValue == 5 && (randomShape[i] == 0 || randomShape[i] == 7) && monster[i].idle == 1) {
@@ -889,6 +901,9 @@ void destroyMonster(int i) {
 			monster[i].speedY = 0;
 			monster[i].anim.currentImage.x = 0;
 			avatarAnimation.currentImage.x = 0;
+
+			score += 150;
+			updateScore(score);
 		}
 	}
 	shapeValue = 0;
@@ -931,8 +946,8 @@ void destroyMonster(int i) {
 		monster[i].monstersSpeed(wizard.decoyAvatarSprite.getPosition().x, wizard.decoyAvatarSprite.getPosition().y, difficulty);
 		monster[i].moveMonsters();
 
-		score += 100;
-		updateScore(score);
+		//score += 100;
+		//updateScore(score);
 	}
 }
 
