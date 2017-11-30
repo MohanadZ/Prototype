@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <time.h>
 #include <thread>
+#include <Windows.h>
+#pragma comment(lib, "winmm.lib")
 
 #include "Avatar.h"
 #include "Monster.h"
@@ -101,6 +103,7 @@ void separateMonsters(int i);
 void destroyMonster(int i);
 void setDifficulty();
 void updateScore(int s);
+void sound();
 
 int main(int argc, char** argv) {
 	for (int i = 0; i < sizeof(templateArray) / sizeof(templateArray[0]); i++) {
@@ -121,11 +124,17 @@ int main(int argc, char** argv) {
 
 	std::thread imageThread(imageProcessing);
 	std::thread gameThread(game);
+	std::thread soundThread(sound);
 
 	imageThread.join();
 	gameThread.join();
+	soundThread.join();
 
 	return 0;
+}
+
+void sound() {
+	PlaySound("132.wav", NULL, SND_ASYNC | SND_FILENAME | SND_LOOP);
 }
 
 void imageProcessing() {
