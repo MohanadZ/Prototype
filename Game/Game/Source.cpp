@@ -18,7 +18,7 @@ using namespace cv;
 
 
 //Global varibales for Image Processing
-VideoCapture cap(1); //capture the video from web cam
+VideoCapture cap(0); //capture the video from web cam
 Mat imgOriginal;
 Mat imgTmp;
 Mat imgLines;
@@ -103,7 +103,6 @@ void separateMonsters(int i);
 void destroyMonster(int i);
 void setDifficulty();
 void updateScore(int s);
-void sound();
 
 int main(int argc, char** argv) {
 	for (int i = 0; i < sizeof(templateArray) / sizeof(templateArray[0]); i++) {
@@ -119,22 +118,13 @@ int main(int argc, char** argv) {
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, 452); // Size of the camera
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 254);
 
-	//imageProcessing();
-	//game();
-
 	std::thread imageThread(imageProcessing);
 	std::thread gameThread(game);
-	std::thread soundThread(sound);
 
 	imageThread.join();
 	gameThread.join();
-	soundThread.join();
 
 	return 0;
-}
-
-void sound() {
-	PlaySound("132.wav", NULL, SND_ASYNC | SND_FILENAME | SND_LOOP);
 }
 
 void imageProcessing() {
@@ -466,6 +456,7 @@ void game() {
 	time(&sec);
 	srand((unsigned char)sec);
 
+
 	//Create a window for the end screen
 	RenderWindow endWindow(VideoMode((unsigned int)gameW, (unsigned int)gameH), "End Screen", Style::Fullscreen);
 
@@ -496,6 +487,7 @@ void game() {
 	hp3.loadFromFile("Hearts3.png");
 
 	updateScore(score);
+	
 
 	//Avatar
 	wizard = Avatar();
@@ -545,31 +537,28 @@ void game() {
 		}
 		cout << "................................." << randomShape[i] << endl;
 	}
+	PlaySound("132.wav", NULL, SND_ASYNC | SND_FILENAME | SND_LOOP);
 
 	//Start the start screen loop
 	while (startWindow.isOpen()) {
+		
+
 		startWindow.draw(startSprite);
 		startWindow.display();
 
-		//gameWindow.setVisible(false);
-		//endWindow.setVisible(false);
-
 		if (shapeValue == 6) {
-
 			break;
 		}
 	}
-
 	startWindow.close();
 
 	//Start the game loop 
 	while (gameWindow.isOpen()) {
 
 		while (gameWindow.pollEvent(windowEvt)) {
-
+			
 			//Switch case for handling the events performed when interacting with the game window
 			switch (windowEvt.type) {
-
 			case Event::Closed:				//Close the window when Close is clicked
 				gameWindow.close();
 
@@ -740,6 +729,7 @@ void game() {
 			gameWindow.draw(monster[i].monsterSprite);
 		}
 		gameWindow.display();
+		
 	}
 
 	gameWindow.close();
@@ -855,6 +845,9 @@ void destroyMonster(int i) {
 			monster[i].speedY = 0;
 			monster[i].anim.currentImage.x = 0;
 			avatarAnimation.currentImage.x = 0;
+
+			score += 50;
+			updateScore(score);
 		}
 
 		if (shapeValue == 2 && (randomShape[i] == 4 || randomShape[i] == 11) && monster[i].idle == 1) {
@@ -866,6 +859,9 @@ void destroyMonster(int i) {
 			monster[i].speedY = 0;
 			monster[i].anim.currentImage.x = 0;
 			avatarAnimation.currentImage.x = 0;
+
+			score += 50;
+			updateScore(score);
 		}
 
 		if (shapeValue == 3 && (randomShape[i] == 2 || randomShape[i] == 9) && monster[i].idle == 1) {
@@ -877,6 +873,9 @@ void destroyMonster(int i) {
 			monster[i].speedY = 0;
 			monster[i].anim.currentImage.x = 0;
 			avatarAnimation.currentImage.x = 0;
+
+			score += 100;
+			updateScore(score);
 		}
 
 		if (shapeValue == 4 && (randomShape[i] == 1 || randomShape[i] == 8) && monster[i].idle == 1) {
@@ -888,6 +887,9 @@ void destroyMonster(int i) {
 			monster[i].speedY = 0;
 			monster[i].anim.currentImage.x = 0;
 			avatarAnimation.currentImage.x = 0;
+
+			score += 100;
+			updateScore(score);
 		}
 
 		if (shapeValue == 5 && (randomShape[i] == 0 || randomShape[i] == 7) && monster[i].idle == 1) {
@@ -899,6 +901,9 @@ void destroyMonster(int i) {
 			monster[i].speedY = 0;
 			monster[i].anim.currentImage.x = 0;
 			avatarAnimation.currentImage.x = 0;
+
+			score += 150;
+			updateScore(score);
 		}
 	}
 	shapeValue = 0;
@@ -941,8 +946,8 @@ void destroyMonster(int i) {
 		monster[i].monstersSpeed(wizard.decoyAvatarSprite.getPosition().x, wizard.decoyAvatarSprite.getPosition().y, difficulty);
 		monster[i].moveMonsters();
 
-		score += 100;
-		updateScore(score);
+		//score += 100;
+		//updateScore(score);
 	}
 }
 
