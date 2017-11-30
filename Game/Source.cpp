@@ -5,10 +5,9 @@
 #include <stdio.h>
 #include <time.h>
 #include <thread>
-#include <SFML/Audio.hpp>
 #include <Windows.h>
 #pragma comment(lib, "winmm.lib")
-#include <mmsystem.h>
+
 #include "Avatar.h"
 #include "Monster.h"
 #include "SpriteAnimation.h"
@@ -24,7 +23,8 @@ Mat imgOriginal;
 Mat imgTmp;
 Mat imgLines;
 Mat imgThresholded;
-Mat templateArray[] = { imread("1.jpg", 0), imread("2.jpg", 0), imread("3.jpg", 0), imread("4.jpg", 0), imread("5.jpg", 0) };
+Mat templateArray[] = { imread("1.jpg", 0), imread("2.jpg", 0), imread("3.jpg", 0), imread("4.jpg", 0), imread("5.jpg", 0), imread("6.jpg", 0) };
+Mat resultStart;
 Mat result;
 Mat translatedImage;
 Mat crop;
@@ -42,6 +42,7 @@ int posY;
 int templateWidth = templateArray[0].cols;
 int templateHeight = templateArray[0].rows;
 int percentage;
+int percentageStart;
 int handClosed = 0;
 int shapeValue = 0;
 
@@ -56,8 +57,6 @@ double dArea;
 double areaHand;
 double areaShape;
 
-
-
 //Global variables for the game
 Event windowEvt;		//Create an Event to be able to interact with the window; close, resize, etc.
 time_t sec;
@@ -67,16 +66,16 @@ const int number = 7;
 int position, axis, side;
 int idle = 1, attack, dying;
 int score = 0;
-float difficulty = 0.0004f;
+float difficulty = 0.0001f;
 int monsterNumber = 1;
 
 SpriteAnimation avatarAnimation;
 Avatar wizard;
 
-Texture bgr;
+Texture startTexture, bgr, endTexture;
 Texture hp0, hp1, hp2, hp3;
 Texture avatarT, monsterT, monsterRT;
-Sprite bgrSprite;
+Sprite startSprite, bgrSprite, endSprite;
 Sprite hpSprite;
 
 Font font;
@@ -90,8 +89,6 @@ float deltaTime;
 int a_idle = 1, a_attack, a_damaged, a_dying;
 int randomShape[number];
 
-int startVariable = 0;
-
 //Image Processing functions
 void imageProcessing();
 void convertRGB2HSI(Mat in_image);
@@ -101,16 +98,14 @@ void scaleImage(Mat input, float x, float y);
 int match(Mat input, double area);
 
 //Game functions 
-void startGame();
 void game();
 void separateMonsters(int i);
 void destroyMonster(int i);
 void setDifficulty();
 void updateScore(int s);
-void sound();
 
 int main(int argc, char** argv) {
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < sizeof(templateArray) / sizeof(templateArray[0]); i++) {
 		threshold(templateArray[i], templateArray[i], 127, 255, THRESH_BINARY);
 	}
 
@@ -120,55 +115,29 @@ int main(int argc, char** argv) {
 		return -1;
 	}
 
-	
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, 452); // Size of the camera
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 254);
 
-	/*std::thread imageThread(imageProcessing);
-	std::thread startThread(startGame);
-
-	imageThread.join();
-	startThread.join();
-
-	cout << "................" << startVariable << endl;
-
-	if (startVariable == 1) {
-		std::thread sound1Thread(sound);
-		std::thread gameThread(game);
-
-		gameThread.join();
-		sound1Thread.join();
-	}*/
 	std::thread imageThread(imageProcessing);
-	std::thread sound1Thread(sound);
 	std::thread gameThread(game);
 
 	imageThread.join();
 	gameThread.join();
-	sound1Thread.join();
-	
-		
-//	PlaySound("132.WAV", NULL, SND_ASYNC);
-	
+
 	return 0;
 }
 
-void sound() {
-	PlaySound("132.wav", NULL, SND_ASYNC | SND_FILENAME | SND_LOOP);
-}
-
-
 void imageProcessing() {
-	namedWindow("Control", CV_WINDOW_NORMAL); //create a window called "Control"
+	//namedWindow("Control", CV_WINDOW_NORMAL); //create a window called "Control"
 
-	int iLowH = 102;
-	int iHighH = 132;
+	int iLowH = 90;
+	int iHighH = 120;
 
-	int iLowS = 76;
+	int iLowS = 89;
 	int iHighS = 255;
 
-	int iLowI = 11;
-	int iHighI = 179;
+	int iLowI = 41;
+	int iHighI = 132;
 
 	//int iLowH = 0;	
 	//int iHighH = 255;
@@ -237,11 +206,11 @@ void imageProcessing() {
 		for (size_t i = 0; i < contours.size(); i++)
 		{
 			areaHand = contourArea(contours[i], false); // Area of hand
-														//cout << "Area : " << areaHand << "\n";
+			cout << "Area : " << areaHand << "\n";
 		}
 
 		drawLine(areaHand);
-		imshow("Thresholded Image", imgThresholded); //show the thresholded image
+		//imshow("Thresholded Image", imgThresholded); //show the thresholded image
 
 		imgOriginal = imgOriginal + imgLines;
 		//imshow("Line", imgLines);
@@ -305,7 +274,7 @@ void convertRGB2HSI(Mat in_image) {
 }
 
 void drawLine(double contourArea) {
-	if (contourArea > 400 && contourArea < 1300) {
+	if (contourArea > 100 && contourArea < 550) {
 		handClosed = 1;
 		posX = (int)(dM10 / dArea);
 		posY = (int)(dM01 / dArea);
@@ -320,9 +289,7 @@ void drawLine(double contourArea) {
 		iLastY = posY;
 	}
 
-	
-
-	if (contourArea > 1700 && contourArea < 2700 && handClosed == 1) {
+	if (contourArea > 650 && handClosed == 1) {
 		handClosed = 0;
 		iLastX = -1;
 		iLastY = -1;
@@ -400,6 +367,13 @@ void scaleImage(Mat input, float x, float y) {
 
 int match(Mat input, double area) {
 	if (area > 1000) {
+		compare(input, templateArray[5], resultStart, CMP_NE);
+		percentageStart = countNonZero(resultStart);
+		if (percentageStart < 11000) {
+			shapeValue = 6;
+			return shapeValue;
+		}
+		//imshow("test2", resultStart);
 		compare(input, templateArray[0], result, CMP_NE);
 		percentage = countNonZero(result);
 		imshow("result", result);
@@ -430,7 +404,7 @@ int match(Mat input, double area) {
 				compare(input, templateArray[2], result, CMP_NE);
 				percentage = countNonZero(result);
 				cout << "Percentage match for shape 3: " << percentage << endl;
-				if (percentage < 8000) {
+				if (percentage < 9000) {
 					shapeValue = 3;
 
 					cout << percentage << endl;
@@ -443,7 +417,7 @@ int match(Mat input, double area) {
 					compare(input, templateArray[3], result, CMP_NE);
 					percentage = countNonZero(result);
 					cout << "Percentage match for shape 4: " << percentage << endl;
-					if (percentage < 8000) {
+					if (percentage < 9000) {
 						shapeValue = 4;
 
 						cout << percentage << endl;
@@ -478,41 +452,33 @@ int match(Mat input, double area) {
 	}
 }
 
-void startGame() {
-	Mat startScreen;
-
-	startScreen = imread("Background.png", 1);
-	imshow("Start Screen", startScreen);
-
-	cout << "................" << startVariable << endl;
-
-	compare(templateArray[0], templateArray[0], result, CMP_NE);
-	int percentageStart = countNonZero(result);
-	if (percentageStart < 6000) {
-		destroyWindow("Start Screen");
-		startVariable = 1;
-
-		cout << "HEEEEEEELLLLLLLLLLOOOOOOOOOOOOOOOO" << endl;
-	}
-
-	cout << "................" << startVariable << endl;
-
-	waitKey(0);
-}
-
 void game() {
 	time(&sec);
 	srand((unsigned char)sec);
 
+
+	//Create a window for the end screen
+	RenderWindow endWindow(VideoMode((unsigned int)gameW, (unsigned int)gameH), "End Screen", Style::Fullscreen);
+
 	//Create a window for the game
-	RenderWindow gameWindow(VideoMode((unsigned int)gameW, (unsigned int)gameH), "Game", Style::Default);
+	RenderWindow gameWindow(VideoMode((unsigned int)gameW, (unsigned int)gameH), "Game", Style::Fullscreen);
+
+	//Create a window for the start screen
+	RenderWindow startWindow(VideoMode((unsigned int)gameW, (unsigned int)gameH), "Start Screen", Style::Fullscreen);
 
 
-	RenderWindow startWindow(VideoMode((unsigned int)gameW, (unsigned int)gameH), "Game", Style::Default);
+	//Start Screen
+	startTexture.loadFromFile("Startscreen.png");
+	startSprite.setTexture(startTexture);
 
 	//Background 
 	bgr.loadFromFile("Background.png");
 	bgrSprite.setTexture(bgr);
+	//bgrSprite.setOrigin(bgrSprite.getGlobalBounds().width / 2, bgrSprite.getGlobalBounds().width / 2);
+
+	//End Screen
+	endTexture.loadFromFile("Endscreen.png");
+	endSprite.setTexture(endTexture);
 
 	//Avatar HP
 	hp0.loadFromFile("Hearts0.png");
@@ -521,6 +487,7 @@ void game() {
 	hp3.loadFromFile("Hearts3.png");
 
 	updateScore(score);
+	
 
 	//Avatar
 	wizard = Avatar();
@@ -532,7 +499,7 @@ void game() {
 		separateMonsters(i);
 
 		monster[i].monsterSprite.setPosition((float)(monster[i].monsterX), (float)(monster[i].monsterY));
-		monster[i].monstersSpeed(wizard.avatarSprite.getPosition().x, wizard.avatarSprite.getPosition().y, difficulty);
+		monster[i].monstersSpeed(wizard.decoyAvatarSprite.getPosition().x, wizard.decoyAvatarSprite.getPosition().y, difficulty);
 
 		//cout << monster[i].monsterX << endl;
 	}
@@ -570,29 +537,28 @@ void game() {
 		}
 		cout << "................................." << randomShape[i] << endl;
 	}
+	PlaySound("132.wav", NULL, SND_ASYNC | SND_FILENAME | SND_LOOP);
 
-
+	//Start the start screen loop
 	while (startWindow.isOpen()) {
+		
 
-		startWindow.draw(bgrSprite);
+		startWindow.draw(startSprite);
 		startWindow.display();
 
-		if (shapeValue == 1) {
-			
+		if (shapeValue == 6) {
 			break;
 		}
 	}
-
 	startWindow.close();
 
-	//Start the game loop in order for the window to stay open
+	//Start the game loop 
 	while (gameWindow.isOpen()) {
 
 		while (gameWindow.pollEvent(windowEvt)) {
-
+			
 			//Switch case for handling the events performed when interacting with the game window
 			switch (windowEvt.type) {
-
 			case Event::Closed:				//Close the window when Close is clicked
 				gameWindow.close();
 
@@ -606,7 +572,6 @@ void game() {
 				break;
 			}
 		}
-
 
 		deltaTime = spriteClock.restart().asSeconds();
 
@@ -690,6 +655,7 @@ void game() {
 					monster[i].dying = 0;
 					monster[i].idle = 1;
 					a_damaged = 0;
+					a_attack = 0;
 					a_idle = 1;
 
 					setDifficulty();
@@ -721,7 +687,7 @@ void game() {
 					cout << "Another spawn random____________________ " << randomShape[i] << endl;
 					monster[i].anim.currentImage.y = randomShape[i];
 
-					monster[i].monstersSpeed(wizard.avatarSprite.getPosition().x, wizard.avatarSprite.getPosition().y, difficulty);
+					monster[i].monstersSpeed(wizard.decoyAvatarSprite.getPosition().x, wizard.decoyAvatarSprite.getPosition().y, difficulty);
 					monster[i].moveMonsters();
 
 					//score += 100;
@@ -733,9 +699,6 @@ void game() {
 
 			destroyMonster(i);
 		}
-
-		
-
 
 		//cout << "The avatar's hp is " << wizard.avatarLife << endl;
 		if (wizard.avatarLife == 3) {
@@ -749,6 +712,8 @@ void game() {
 		}
 		else if (wizard.avatarLife == 0) {
 			hpSprite.setTexture(hp0);
+
+			break;
 		}
 		if (wizard.avatarLife < 0) {
 			wizard.avatarLife = 0;
@@ -764,6 +729,22 @@ void game() {
 			gameWindow.draw(monster[i].monsterSprite);
 		}
 		gameWindow.display();
+		
+	}
+
+	gameWindow.close();
+
+	while (endWindow.isOpen()) {
+		hpSprite.setTexture(hp0);
+
+		endWindow.draw(endSprite);
+		endWindow.draw(hpSprite);
+
+		scoreText.setOrigin(scoreText.getGlobalBounds().width / 2, scoreText.getGlobalBounds().height / 2);
+		scoreText.setPosition((float)gameW / 2, (float)gameH * 0.8f);
+		endWindow.draw(scoreText);
+
+		endWindow.display();
 	}
 }
 
@@ -807,14 +788,14 @@ void separateMonsters(int i) {
 
 		if (side == 0 && axis == 0) {
 			monster[i].monsterX = (float)position;
-			monster[i].monsterY = -140;
+			monster[i].monsterY = -150;
 		}
 		else if (side == 1 && axis == 0) {
 			monster[i].monsterX = (float)position;
 			monster[i].monsterY = (float)gameH + 51;
 		}
 		else if (side == 0 && axis == 1) {
-			monster[i].monsterX = -140;
+			monster[i].monsterX = -150;
 			monster[i].monsterY = (float)position;
 		}
 		else if (side == 1 && axis == 1) {
@@ -849,69 +830,70 @@ void separateMonsters(int i) {
 		}
 		i++;
 	}
-	cout << "The separate is running " << x << " times" << endl;
+	//cout << "The separate is running " << x << " times" << endl;
 }
 
 void destroyMonster(int i) {
 
-	if (shapeValue == 1 && (randomShape[i] == 3 || randomShape[i] == 10) && monster[i].idle == 1) {
-		a_idle = 0;
-		a_attack = 1;
-		monster[i].idle = 0;
-		monster[i].dying = 1;
-		monster[i].speedX = 0;
-		monster[i].speedY = 0;
-		monster[i].anim.currentImage.x = 0;
-		avatarAnimation.currentImage.x = 0;
+	for (int i = 0; i < monsterNumber; i++) {
+		if (shapeValue == 1 && (randomShape[i] == 3 || randomShape[i] == 10) && monster[i].idle == 1) {
+			a_idle = 0;
+			a_attack = 1;
+			monster[i].idle = 0;
+			monster[i].dying = 1;
+			monster[i].speedX = 0;
+			monster[i].speedY = 0;
+			monster[i].anim.currentImage.x = 0;
+			avatarAnimation.currentImage.x = 0;
+		}
+
+		if (shapeValue == 2 && (randomShape[i] == 4 || randomShape[i] == 11) && monster[i].idle == 1) {
+			a_idle = 0;
+			a_attack = 1;
+			monster[i].idle = 0;
+			monster[i].dying = 1;
+			monster[i].speedX = 0;
+			monster[i].speedY = 0;
+			monster[i].anim.currentImage.x = 0;
+			avatarAnimation.currentImage.x = 0;
+		}
+
+		if (shapeValue == 3 && (randomShape[i] == 2 || randomShape[i] == 9) && monster[i].idle == 1) {
+			a_idle = 0;
+			a_attack = 1;
+			monster[i].idle = 0;
+			monster[i].dying = 1;
+			monster[i].speedX = 0;
+			monster[i].speedY = 0;
+			monster[i].anim.currentImage.x = 0;
+			avatarAnimation.currentImage.x = 0;
+		}
+
+		if (shapeValue == 4 && (randomShape[i] == 1 || randomShape[i] == 8) && monster[i].idle == 1) {
+			a_idle = 0;
+			a_attack = 1;
+			monster[i].idle = 0;
+			monster[i].dying = 1;
+			monster[i].speedX = 0;
+			monster[i].speedY = 0;
+			monster[i].anim.currentImage.x = 0;
+			avatarAnimation.currentImage.x = 0;
+		}
+
+		if (shapeValue == 5 && (randomShape[i] == 0 || randomShape[i] == 7) && monster[i].idle == 1) {
+			a_idle = 0;
+			a_attack = 1;
+			monster[i].idle = 0;
+			monster[i].dying = 1;
+			monster[i].speedX = 0;
+			monster[i].speedY = 0;
+			monster[i].anim.currentImage.x = 0;
+			avatarAnimation.currentImage.x = 0;
+		}
 	}
+	shapeValue = 0;
 
-	if (shapeValue == 2 && (randomShape[i] == 4 || randomShape[i] == 11) && monster[i].idle == 1) {
-		a_idle = 0;
-		a_attack = 1;
-		monster[i].idle = 0;
-		monster[i].dying = 1;
-		monster[i].speedX = 0;
-		monster[i].speedY = 0;
-		monster[i].anim.currentImage.x = 0;
-		avatarAnimation.currentImage.x = 0;
-	}
-
-	if (shapeValue == 3 && (randomShape[i] == 2 || randomShape[i] == 9) && monster[i].idle == 1) {
-		a_idle = 0;
-		a_attack = 1;
-		monster[i].idle = 0;
-		monster[i].dying = 1;
-		monster[i].speedX = 0;
-		monster[i].speedY = 0;
-		monster[i].anim.currentImage.x = 0;
-		avatarAnimation.currentImage.x = 0;
-	}
-
-	if (shapeValue == 4 && (randomShape[i] == 1 || randomShape[i] == 8) && monster[i].idle == 1) {
-		a_idle = 0;
-		a_attack = 1;
-		monster[i].idle = 0;
-		monster[i].dying = 1;
-		monster[i].speedX = 0;
-		monster[i].speedY = 0;
-		monster[i].anim.currentImage.x = 0;
-		avatarAnimation.currentImage.x = 0;
-	}
-
-	if (shapeValue == 5 && (randomShape[i] == 0 || randomShape[i] == 7) && monster[i].idle == 1) {
-		a_idle = 0;
-		a_attack = 1;
-		monster[i].idle = 0;
-		monster[i].dying = 1;
-		monster[i].speedX = 0;
-		monster[i].speedY = 0;
-		monster[i].anim.currentImage.x = 0;
-		avatarAnimation.currentImage.x = 0;
-	}
-
-	if (monster[i].dying == 1 && monster[i].anim.currentImage.x == 19) {
-
-		cout << "CAN YOU FIND ME HERE!!!!" << endl;
+	if (monster[i].dying == 1 && !monster[i].monsterSprite.getGlobalBounds().intersects(wizard.decoyAvatarSprite.getGlobalBounds()) && monster[i].anim.currentImage.x == 19) {
 
 		monster[i].dying = 0;
 		monster[i].idle = 1;
@@ -946,7 +928,7 @@ void destroyMonster(int i) {
 		cout << "Another spawn random____________________ " << randomShape[i] << endl;
 		monster[i].anim.currentImage.y = randomShape[i];
 
-		monster[i].monstersSpeed(wizard.avatarSprite.getPosition().x, wizard.avatarSprite.getPosition().y, difficulty);
+		monster[i].monstersSpeed(wizard.decoyAvatarSprite.getPosition().x, wizard.decoyAvatarSprite.getPosition().y, difficulty);
 		monster[i].moveMonsters();
 
 		score += 100;
@@ -955,23 +937,23 @@ void destroyMonster(int i) {
 }
 
 void setDifficulty() {
-	difficulty += 0.000005f;
-	if (difficulty >= 0.00041) {
+	difficulty += 0.000025f;
+	if (difficulty >= 0.00018) {
 		monsterNumber = 2;
 	}
-	if (difficulty >= 0.00045) {
+	if (difficulty >= 0.00038) {
 		monsterNumber = 3;
 	}
-	if (difficulty >= 0.00051) {
+	if (difficulty >= 0.0006) {
 		monsterNumber = 4;
 	}
-	if (difficulty >= 0.00062) {
+	if (difficulty >= 0.0009) {
 		monsterNumber = 5;
 	}
-	if (difficulty >= 0.00073) {
+	if (difficulty >= 0.0015) {
 		monsterNumber = 6;
 	}
-	if (difficulty >= 0.00085) {
+	if (difficulty >= 0.0022) {
 		monsterNumber = 7;
 	}
 }
@@ -982,7 +964,9 @@ void updateScore(int s) {
 
 	font.loadFromFile("Pixeled.ttf");
 	scoreText = Text(currentScore, font, 24);
-	scoreText.setFillColor(Color::Yellow);
+
+	Color c(0xfbb03bff);
+	scoreText.setFillColor(c);
 	scoreText.setStyle(Text::Italic | Text::Bold);
 	scoreText.setOrigin(scoreText.getGlobalBounds().width / 2, scoreText.getGlobalBounds().height / 2);
 	scoreText.setPosition((float)gameW - 230, (float)30);
