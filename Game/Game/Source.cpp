@@ -130,14 +130,14 @@ int main(int argc, char** argv) {
 void imageProcessing() {
 	//namedWindow("Control", CV_WINDOW_NORMAL); //create a window called "Control"
 
-	int iLowH = 90;
-	int iHighH = 120;
+	int iLowH = 94;
+	int iHighH = 127;
 
-	int iLowS = 89;
-	int iHighS = 255;
+	int iLowS = 91;
+	int iHighS = 176;
 
-	int iLowI = 41;
-	int iHighI = 132;
+	int iLowI = 86;
+	int iHighI = 255;
 
 	//int iLowH = 0;	
 	//int iHighH = 255;
@@ -203,7 +203,7 @@ void imageProcessing() {
 		vector<vector<Point> > contours_poly(contours.size());
 		vector<cv::Rect> boundRect(contours.size());
 
-		for (size_t i = 0; i < contours.size(); i++)
+	for (size_t i = 0; i < contours.size(); i++)
 		{
 			areaHand = contourArea(contours[i], false); // Area of hand
 			cout << "Area : " << areaHand << "\n";
@@ -297,7 +297,7 @@ void drawLine(double contourArea) {
 		translateImage(imgLines);
 		scaleImage(translatedImage, dX, dY);
 		match(crop, areaShape);
-		cout << "The returned value is " << shapeValue << endl;
+		//cout << "The returned value is " << shapeValue << endl;
 		//imshow("Drawn Shape", imgLines);
 		imgLines = Mat::zeros(imgTmp.size(), CV_8UC3);
 		translatedImage = Mat::zeros(imgLines.rows, imgLines.cols, CV_8UC1);
@@ -499,7 +499,7 @@ void game() {
 		separateMonsters(i);
 
 		monster[i].monsterSprite.setPosition((float)(monster[i].monsterX), (float)(monster[i].monsterY));
-		monster[i].monstersSpeed(wizard.decoyAvatarSprite.getPosition().x, wizard.decoyAvatarSprite.getPosition().y, difficulty);
+		monster[i].monstersSpeed(wizard.decoyAvatarSprite.getPosition().x, wizard.decoyAvatarSprite.getPosition().y, 0.00015f);
 
 		//cout << monster[i].monsterX << endl;
 	}
@@ -687,7 +687,7 @@ void game() {
 					cout << "Another spawn random____________________ " << randomShape[i] << endl;
 					monster[i].anim.currentImage.y = randomShape[i];
 
-					monster[i].monstersSpeed(wizard.decoyAvatarSprite.getPosition().x, wizard.decoyAvatarSprite.getPosition().y, difficulty);
+					monster[i].monstersSpeed(wizard.decoyAvatarSprite.getPosition().x, wizard.decoyAvatarSprite.getPosition().y, 0.00015f);
 					monster[i].moveMonsters();
 
 					//score += 100;
@@ -940,10 +940,10 @@ void destroyMonster(int i) {
 			randomShape[i] += 7;
 		}
 
-		cout << "Another spawn random____________________ " << randomShape[i] << endl;
+		//cout << "Another spawn random____________________ " << randomShape[i] << endl;
 		monster[i].anim.currentImage.y = randomShape[i];
 
-		monster[i].monstersSpeed(wizard.decoyAvatarSprite.getPosition().x, wizard.decoyAvatarSprite.getPosition().y, difficulty);
+		monster[i].monstersSpeed(wizard.decoyAvatarSprite.getPosition().x, wizard.decoyAvatarSprite.getPosition().y, 0.00015f);
 		monster[i].moveMonsters();
 
 		//score += 100;
